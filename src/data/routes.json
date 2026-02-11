@@ -1,0 +1,200 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "routeId": "route-1",
+        "routeName": "DC Bus Route 1 - Lanang to Ecoland",
+        "color": "#2563eb",
+        "description": "Main route from SM Lanang to SM Ecoland via downtown"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [125.6457, 7.1026],
+          [125.6353, 7.0898],
+          [125.6281, 7.0842],
+          [125.6128, 7.0731],
+          [125.6089, 7.0672],
+          [125.6055, 7.0648],
+          [125.5764, 7.0538]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "routeId": "route-2",
+        "routeName": "DC Bus Route 2 - Toril to Bankerohan",
+        "color": "#dc2626",
+        "description": "Route from Toril to Bankerohan Market"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [125.5200, 7.0300],
+          [125.5450, 7.0400],
+          [125.5650, 7.0550],
+          [125.5764, 7.0538],
+          [125.6000, 7.0680],
+          [125.6128, 7.0731]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-1",
+        "stopName": "SM Lanang Premier",
+        "routeIds": ["route-1"],
+        "order": 1,
+        "description": "Major mall in Lanang area"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6457, 7.1026]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-2",
+        "stopName": "Magsaysay Park",
+        "routeIds": ["route-1"],
+        "order": 2,
+        "description": "Near Magsaysay Park and waterfront"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6353, 7.0898]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-3",
+        "stopName": "Victoria Plaza",
+        "routeIds": ["route-1"],
+        "order": 3,
+        "description": "Victoria Plaza Mall area"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6281, 7.0842]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-4",
+        "stopName": "Bankerohan Market",
+        "routeIds": ["route-1", "route-2"],
+        "order": 4,
+        "description": "Major public market - TRANSFER POINT"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6128, 7.0731]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-5",
+        "stopName": "San Pedro Street",
+        "routeIds": ["route-1"],
+        "order": 5,
+        "description": "San Pedro Street commercial area"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6089, 7.0672]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-6",
+        "stopName": "Aldevinco Shopping Center",
+        "routeIds": ["route-1"],
+        "order": 6,
+        "description": "Aldevinco and CM Recto area"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6055, 7.0648]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-7",
+        "stopName": "SM City Ecoland",
+        "routeIds": ["route-1", "route-2"],
+        "order": 7,
+        "description": "SM Ecoland Mall - TRANSFER POINT"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.5764, 7.0538]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-8",
+        "stopName": "Toril Proper",
+        "routeIds": ["route-2"],
+        "order": 1,
+        "description": "Toril district center"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.5200, 7.0300]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-9",
+        "stopName": "Toril Junction",
+        "routeIds": ["route-2"],
+        "order": 2,
+        "description": "Main junction in Toril"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.5450, 7.0400]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-10",
+        "stopName": "Calinan Road Junction",
+        "routeIds": ["route-2"],
+        "order": 3,
+        "description": "Junction to Calinan road"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.5650, 7.0550]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "stopId": "stop-11",
+        "stopName": "Matina Crossing",
+        "routeIds": ["route-2"],
+        "order": 5,
+        "description": "Matina Crossing area"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [125.6000, 7.0680]
+      }
+    }
+  ]
+}
