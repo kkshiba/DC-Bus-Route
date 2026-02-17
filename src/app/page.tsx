@@ -48,15 +48,11 @@ export default function Home() {
       <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-3xl md:text-5xl font-bold mb-4">
-            DC Bus Route
+            Navigate Davao City with Ease
           </h1>
           <h2 className="text-xl md:text-2xl font-medium mb-6 text-primary-100">
-            Davao City Bus Route and Bus Stop Guide
+            Find your route. Know your stops. Never get lost again.
           </h2>
-          <p className="text-lg md:text-xl max-w-2xl mx-auto mb-4 text-primary-50">
-            A web-based application that shows DC Bus routes and bus stops.
-            Helps commuters know where to board and where to get off.
-          </p>
           <p className="text-sm md:text-base text-primary-200">
             Designed for daily commuters and first-time riders.
           </p>
