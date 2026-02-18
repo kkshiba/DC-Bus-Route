@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { MapPin, Navigation, Clock, Bus, ChevronRight } from "lucide-react";
+import { MapPin, Navigation, Clock, Bus, LocateFixed, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Map from "@/components/Map";
@@ -19,6 +19,8 @@ function RouteMapContent() {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<RouteResult | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
+  const [locationFound, setLocationFound] = useState(false);
 
   // Load route data
   const { routes, stops, routeData } = useMemo(() => {
@@ -39,10 +41,9 @@ function RouteMapContent() {
     return { routes, stops, routeData };
   }, []);
 
-  // Find route based on search params or user location
+  // Find route based on search params
   useEffect(() => {
     if (startParam && destinationParam) {
-      // Find stops matching the search params
       const startStop = stops.find(
         (s) => s.properties.stopName.toLowerCase().includes(startParam.toLowerCase())
       );
@@ -63,14 +64,25 @@ function RouteMapContent() {
     }
   }, [startParam, destinationParam, stops, routeData]);
 
+  // Clear "found" flash after 3s
+  useEffect(() => {
+    if (locationFound) {
+      const t = setTimeout(() => setLocationFound(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [locationFound]);
+
   // Get user location
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      setLocateError("Geolocation is not supported by your browser.");
       return;
     }
 
     setIsLocating(true);
+    setLocateError(null);
+    setLocationFound(false);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserLocation({
@@ -78,12 +90,14 @@ function RouteMapContent() {
           lng: position.coords.longitude,
         });
         setIsLocating(false);
+        setLocationFound(true);
       },
       (error) => {
         console.error("Error getting location:", error);
-        alert("Unable to get your location. Please enable location services.");
+        setLocateError("Unable to get your location. Please enable location services.");
         setIsLocating(false);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
@@ -101,7 +115,6 @@ function RouteMapContent() {
       allStops.push(segment.alightingStop);
     }
 
-    // Remove duplicates (transfer points appear twice)
     return allStops.filter(
       (stop, index, self) =>
         index === self.findIndex((s) => s.properties.stopId === stop.properties.stopId)
@@ -110,7 +123,7 @@ function RouteMapContent() {
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]">
-      {/* Map Area - 70% on desktop, full width on mobile */}
+      {/* Map Area */}
       <div className="w-full md:w-[70%] h-[50vh] md:h-full relative">
         <Map
           routes={routes}
@@ -120,19 +133,61 @@ function RouteMapContent() {
           className="w-full h-full"
         />
 
-        {/* Locate Me Button */}
-        <Button
-          onClick={handleLocateMe}
-          disabled={isLocating}
-          className="absolute bottom-4 right-4 bg-white text-primary-600 hover:bg-gray-100 shadow-lg"
-          size="sm"
-        >
-          <Navigation className="w-4 h-4 mr-2" />
-          {isLocating ? "Locating..." : "Locate Me"}
-        </Button>
+        {/* Locate Me FAB */}
+        <div className="absolute bottom-6 right-4 flex flex-col items-end gap-2 z-[1000]">
+
+          {/* Error toast */}
+          {locateError && (
+            <div className="bg-red-600 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-[200px] text-right">
+              {locateError}
+            </div>
+          )}
+
+          {/* Success toast */}
+          {locationFound && (
+            <div className="bg-green-600 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+              📍 Location found!
+            </div>
+          )}
+
+          {/* FAB Button */}
+          <button
+            onClick={handleLocateMe}
+            disabled={isLocating}
+            title="Show my location on map"
+            className={`
+              flex items-center gap-2 px-4 py-3 rounded-full shadow-xl
+              font-semibold text-sm transition-all duration-200
+              focus:outline-none focus:ring-4 focus:ring-blue-300
+              ${isLocating
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : locationFound
+                ? "bg-green-500 text-white hover:bg-green-600 active:scale-95"
+                : "bg-white text-primary-600 hover:bg-primary-50 active:scale-95 border border-gray-200"
+              }
+            `}
+          >
+            {isLocating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Locating…</span>
+              </>
+            ) : locationFound ? (
+              <>
+                <LocateFixed className="w-5 h-5" />
+                <span>Located</span>
+              </>
+            ) : (
+              <>
+                <LocateFixed className="w-5 h-5" />
+                <span>My Location</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Side Panel - 30% on desktop, full width on mobile */}
+      {/* Side Panel */}
       <div className="w-full md:w-[30%] h-[50vh] md:h-full overflow-y-auto bg-white border-l border-gray-200">
         <div className="p-4 space-y-4">
           {/* Trip Summary */}
@@ -146,7 +201,6 @@ function RouteMapContent() {
             <CardContent className="space-y-3">
               {selectedRoute ? (
                 <>
-                  {/* Boarding Point */}
                   <div className="flex items-start gap-3">
                     <div className="w-3 h-3 rounded-full bg-green-500 mt-1.5" />
                     <div>
@@ -157,7 +211,6 @@ function RouteMapContent() {
                     </div>
                   </div>
 
-                  {/* Transfer Points */}
                   {selectedRoute.transferPoints.map((transfer, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1.5" />
@@ -168,7 +221,6 @@ function RouteMapContent() {
                     </div>
                   ))}
 
-                  {/* Drop-off Point */}
                   <div className="flex items-start gap-3">
                     <div className="w-3 h-3 rounded-full bg-red-500 mt-1.5" />
                     <div>
@@ -179,7 +231,6 @@ function RouteMapContent() {
                     </div>
                   </div>
 
-                  {/* Stats */}
                   <div className="pt-3 border-t grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-500">Total Stops</p>
@@ -206,7 +257,6 @@ function RouteMapContent() {
                     </div>
                   </div>
 
-                  {/* Route Names */}
                   <div className="pt-3 border-t">
                     <p className="text-xs text-gray-500 mb-2">Route(s)</p>
                     {selectedRoute.segments.map((segment, i) => (
@@ -296,9 +346,7 @@ function RouteMapContent() {
                         <span className="text-xs text-gray-400 w-4">{index + 1}</span>
                         <span
                           className={`text-sm ${
-                            isBoarding || isAlighting || isTransfer
-                              ? "font-medium"
-                              : ""
+                            isBoarding || isAlighting || isTransfer ? "font-medium" : ""
                           }`}
                         >
                           {stop.properties.stopName}
