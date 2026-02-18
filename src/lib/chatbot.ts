@@ -17,22 +17,25 @@ const genAI = new GoogleGenerativeAI(
 );
 
 // Get all stops from the data
-function getAllStops(): GeoJSONStop[] {
-  const geojson = getRawGeoJSON();
+async function getAllStops(): Promise<GeoJSONStop[]> {
+  const geojson = await getRawGeoJSON();
   return geojson.features.filter(
     (f) => f.geometry.type === "Point"
   ) as GeoJSONStop[];
 }
 
-// Build system context with route data
-function buildSystemContext(userLocation: Coordinates | null): string {
-  const stops = getAllStops();
-  const geojson = getRawGeoJSON();
-
-  // Get route information
-  const routes = geojson.features.filter(
+// Get all routes from the data
+async function getAllRoutes(): Promise<GeoJSONRoute[]> {
+  const geojson = await getRawGeoJSON();
+  return geojson.features.filter(
     (f) => f.geometry.type === "LineString"
   ) as GeoJSONRoute[];
+}
+
+// Build system context with route data
+async function buildSystemContext(userLocation: Coordinates | null): Promise<string> {
+  const stops = await getAllStops();
+  const routes = await getAllRoutes();
 
   const stopsList = stops
     .sort((a, b) => a.properties.order - b.properties.order)
@@ -76,8 +79,8 @@ Remember: You are specifically helping with DC Bus routes in Davao City. Do not 
 }
 
 // Find a stop by name (partial match)
-function findStopByName(name: string): GeoJSONStop | null {
-  const stops = getAllStops();
+async function findStopByName(name: string): Promise<GeoJSONStop | null> {
+  const stops = await getAllStops();
   const lowerName = name.toLowerCase();
 
   // Try exact match first
@@ -113,7 +116,7 @@ function extractFromTo(message: string): { from: string; to: string } | null {
 }
 
 // Get route finding context to add to AI prompt
-function getRouteContext(message: string, userLocation: Coordinates | null): string {
+async function getRouteContext(message: string, userLocation: Coordinates | null): Promise<string> {
   const lowerMessage = message.toLowerCase();
   let additionalContext = "";
 
@@ -125,7 +128,7 @@ function getRouteContext(message: string, userLocation: Coordinates | null): str
     lowerMessage.includes("nearby")
   ) {
     if (userLocation) {
-      const stops = getAllStops();
+      const stops = await getAllStops();
       const nearest = findNearestStop(userLocation, stops);
       if (nearest) {
         additionalContext = `\n\n[SYSTEM DATA: The nearest stop to the user is ${nearest.stop.properties.stopName}, which is ${formatDistance(nearest.distance)} away. Routes serving this stop: ${nearest.stop.properties.routeIds.map(id => id.replace("route-", "Route ")).join(", ")}]`;
@@ -138,11 +141,11 @@ function getRouteContext(message: string, userLocation: Coordinates | null): str
   // Check if user is asking for a route
   const fromTo = extractFromTo(message);
   if (fromTo) {
-    const fromStop = findStopByName(fromTo.from);
-    const toStop = findStopByName(fromTo.to);
+    const fromStop = await findStopByName(fromTo.from);
+    const toStop = await findStopByName(fromTo.to);
 
     if (fromStop && toStop) {
-      const routeData = loadRouteData();
+      const routeData = await loadRouteData();
       const result = findRoute(
         {
           origin: {
@@ -188,14 +191,14 @@ export async function getChatbotResponse(
   try {
     // Check if API key is available
     if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-      return getFallbackResponse(message, userLocation);
+      return await getFallbackResponse(message, userLocation);
     }
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // Build the context and get route data
-    const systemContext = buildSystemContext(userLocation);
-    const routeContext = getRouteContext(message, userLocation);
+    const systemContext = await buildSystemContext(userLocation);
+    const routeContext = await getRouteContext(message, userLocation);
 
     // Create the prompt
     const prompt = `${systemContext}${routeContext}
@@ -212,15 +215,15 @@ Please provide a helpful response based on the DC Bus route information above.`;
   } catch (error) {
     console.error("Gemini API error:", error);
     // Fallback to basic response on error
-    return getFallbackResponse(message, userLocation);
+    return await getFallbackResponse(message, userLocation);
   }
 }
 
 // Fallback response function (keyword-based)
-function getFallbackResponse(
+async function getFallbackResponse(
   message: string,
   userLocation: Coordinates | null
-): string {
+): Promise<string> {
   const lowerMessage = message.toLowerCase().trim();
 
   // Greetings
@@ -246,7 +249,7 @@ function getFallbackResponse(
       return "I need your location to find the nearest stop. Please enable location services in your browser and try again.";
     }
 
-    const stops = getAllStops();
+    const stops = await getAllStops();
     const nearest = findNearestStop(userLocation, stops);
 
     if (!nearest) {
@@ -264,7 +267,7 @@ function getFallbackResponse(
     lowerMessage.includes("what stops") ||
     lowerMessage.includes("available stops")
   ) {
-    const stops = getAllStops();
+    const stops = await getAllStops();
     const sortedStops = [...stops].sort(
       (a, b) => a.properties.order - b.properties.order
     );
@@ -279,8 +282,8 @@ function getFallbackResponse(
   // Route finding (from X to Y)
   const fromTo = extractFromTo(message);
   if (fromTo) {
-    const fromStop = findStopByName(fromTo.from);
-    const toStop = findStopByName(fromTo.to);
+    const fromStop = await findStopByName(fromTo.from);
+    const toStop = await findStopByName(fromTo.to);
 
     if (!fromStop) {
       return `I couldn't find a stop matching "${fromTo.from}". Please try a different location name.`;
@@ -290,7 +293,7 @@ function getFallbackResponse(
       return `I couldn't find a stop matching "${fromTo.to}". Please try a different location name.`;
     }
 
-    const routeData = loadRouteData();
+    const routeData = await loadRouteData();
     const result = findRoute(
       {
         origin: {
