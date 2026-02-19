@@ -13,10 +13,13 @@ import {
   ArrowLeft,
   Route,
   Circle,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Map from "@/components/Map";
+import { RoutesSidePanel } from "@/components/RoutesSidePanel";
 import { loadRouteData, getRawGeoJSON, getOrderedStopsForRoute } from "@/lib/data-loader";
 import { findRoute, getRouteDirections } from "@/lib/route-algorithm";
 import { formatDistance, formatDuration } from "@/lib/geo-utils";
@@ -53,6 +56,12 @@ function RouteMapContent() {
   // Single route display state
   const [displayedRoute, setDisplayedRoute] = useState<GeoJSONRoute | null>(null);
   const [routeStops, setRouteStops] = useState<GeoJSONStop[]>([]);
+
+  // Multi-select route state
+  const [selectedRouteIds, setSelectedRouteIds] = useState<string[]>([]);
+
+  // Mobile drawer state
+  const [mobileRoutesOpen, setMobileRoutesOpen] = useState(false);
 
   // Load route data from Supabase
   useEffect(() => {
@@ -103,6 +112,11 @@ function RouteMapContent() {
           setRouteStops(orderedStops);
         });
       }
+
+      // Also add to selected routes for multi-select panel (use functional update to avoid dependency)
+      setSelectedRouteIds((prev) =>
+        prev.includes(routeParam) ? prev : [routeParam]
+      );
     } else {
       setDisplayedRoute(null);
       setRouteStops([]);
@@ -200,10 +214,10 @@ function RouteMapContent() {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
-          <p className="mt-4 text-gray-500">Loading route data...</p>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading route data...</p>
         </div>
       </div>
     );
@@ -212,7 +226,7 @@ function RouteMapContent() {
   // Show error state
   if (loadError) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
         <div className="text-center">
           <p className="text-red-500">{loadError}</p>
           <Button onClick={() => window.location.reload()} className="mt-4">
@@ -224,17 +238,40 @@ function RouteMapContent() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100dvh-4rem)] overflow-hidden">
+      {/* Routes Side Panel (Left) */}
+      <div className="hidden md:block">
+        <RoutesSidePanel
+          selectedRouteIds={selectedRouteIds}
+          onSelectionChange={setSelectedRouteIds}
+        />
+      </div>
+
       {/* Map Area */}
-      <div className="w-full md:w-[70%] h-[50vh] md:h-full relative">
+      <div className="flex-1 h-full relative">
         <Map
           routes={routes}
           stops={stops}
           selectedRoute={selectedRoute}
           highlightedRouteId={routeParam || undefined}
+          highlightedRouteIds={selectedRouteIds}
           userLocation={userLocation}
           className="w-full h-full"
         />
+
+        {/* Mobile Routes FAB */}
+        <button
+          onClick={() => setMobileRoutesOpen(true)}
+          className="md:hidden absolute bottom-6 left-4 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-sm transition-all duration-200 z-[1000]"
+        >
+          <Bus className="w-5 h-5" />
+          <span>Routes</span>
+          {selectedRouteIds.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
+              {selectedRouteIds.length}
+            </span>
+          )}
+        </button>
 
         {/* Locate Me FAB */}
         <div className="absolute bottom-6 right-4 flex flex-col items-end gap-2 z-[1000]">
@@ -287,22 +324,24 @@ function RouteMapContent() {
         </div>
       </div>
 
-      {/* Side Panel */}
-      <div className="w-full md:w-[30%] h-[50vh] md:h-full overflow-y-auto bg-gray-50">
+      {/* Route Details Panel (Right) - only show when route is selected */}
+      {hasRouteToDisplay && (
+      <div className="hidden md:block w-80 h-full overflow-y-auto bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
         <div className="p-4 space-y-4">
           {/* Back button */}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push("/")}
-            className="text-gray-600 hover:text-gray-900 -ml-2"
+            onClick={() => {
+              setSelectedRouteIds([]);
+              router.push("/route-map");
+            }}
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 -ml-2"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Home
+            Clear Selection
           </Button>
 
-          {hasRouteToDisplay ? (
-            <>
               {/* Route Header (for single route view) */}
               {routeInfo && (
                 <Card className="overflow-hidden">
@@ -323,7 +362,7 @@ function RouteMapContent() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h2 className="text-xl font-bold text-gray-900">
+                          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                             {routeInfo.routeNumber}
                           </h2>
                           {routeInfo.timePeriod && (
@@ -338,17 +377,17 @@ function RouteMapContent() {
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-600 mt-0.5">{routeInfo.name}</p>
+                        <p className="text-gray-600 dark:text-gray-300 mt-0.5">{routeInfo.name}</p>
                         {routeInfo.description && (
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {routeInfo.description}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 mt-4 pt-4 border-t">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                         <MapPin className="w-4 h-4" />
                         <span>{routeStops.length} stops</span>
                       </div>
@@ -361,7 +400,7 @@ function RouteMapContent() {
               {selectedRoute && (
                 <Card>
                   <CardContent className="pt-4">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                       <Route className="w-5 h-5 text-primary-600" />
                       Trip Summary
                     </h3>
@@ -606,32 +645,62 @@ function RouteMapContent() {
                   )}
                 </CardContent>
               </Card>
-            </>
-          ) : (
-            /* Empty State */
-            <Card className="mt-4">
-              <CardContent className="py-12 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                  <Bus className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No Route Selected
-                </h3>
-                <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
-                  Select a route from the homepage to view it on the map, or search
-                  for a route between two locations.
-                </p>
-                <Link href="/">
-                  <Button className="bg-primary-600 hover:bg-primary-700">
-                    Browse Routes
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
+      )}
+
+      {/* Mobile Routes Bottom Sheet */}
+      {mobileRoutesOpen && (
+        <div className="md:hidden fixed inset-0 z-[2000]">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 transition-opacity"
+            onClick={() => setMobileRoutesOpen(false)}
+          />
+
+          {/* Bottom Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+            </div>
+
+            {/* Header */}
+            <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                  <Bus className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Bus Routes
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {selectedRouteIds.length > 0
+                      ? `${selectedRouteIds.length} selected`
+                      : "Select routes to view on map"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileRoutesOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+            </div>
+
+            {/* Routes Panel Content */}
+            <div className="flex-1 overflow-y-auto">
+              <RoutesSidePanel
+                selectedRouteIds={selectedRouteIds}
+                onSelectionChange={setSelectedRouteIds}
+                compact
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -640,10 +709,10 @@ export default function RouteMap() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="flex items-center justify-center h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
-            <p className="mt-4 text-gray-500">Loading route map...</p>
+            <p className="mt-4 text-gray-500 dark:text-gray-400">Loading route map...</p>
           </div>
         </div>
       }

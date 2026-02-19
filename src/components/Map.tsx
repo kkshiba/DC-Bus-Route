@@ -15,6 +15,7 @@ interface MapProps {
   stops: GeoJSONStop[];
   selectedRoute?: RouteResult | null;
   highlightedRouteId?: string | null; // Single route to highlight (from ?route= param)
+  highlightedRouteIds?: string[]; // Multiple routes to highlight (for multi-select)
   userLocation?: { lat: number; lng: number } | null;
   onStopClick?: (stop: GeoJSONStop) => void;
   className?: string;
@@ -27,6 +28,7 @@ function MapInner({
   stops,
   selectedRoute,
   highlightedRouteId,
+  highlightedRouteIds = [],
   userLocation,
   onStopClick,
   className,
@@ -69,21 +71,25 @@ function MapInner({
 
   const { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker } = ReactLeaflet;
 
-  // Get highlighted route IDs from selected route or single highlighted route
-  const highlightedRouteIds = new Set<string>();
+  // Get highlighted route IDs from selected route, single highlighted route, or multi-select
+  const highlightedRouteIdSet = new Set<string>();
   if (selectedRoute) {
-    selectedRoute.segments.forEach((s) => highlightedRouteIds.add(s.routeId));
+    selectedRoute.segments.forEach((s) => highlightedRouteIdSet.add(s.routeId));
   }
   if (highlightedRouteId) {
-    highlightedRouteIds.add(highlightedRouteId);
+    highlightedRouteIdSet.add(highlightedRouteId);
+  }
+  // Add multi-select routes
+  for (const id of highlightedRouteIds) {
+    highlightedRouteIdSet.add(id);
   }
 
   // Determine which routes to show
-  const hasSelection = highlightedRouteIds.size > 0;
+  const hasSelection = highlightedRouteIdSet.size > 0;
   const routesToShow = showAllRoutes
     ? routes
     : hasSelection
-    ? routes.filter((r) => highlightedRouteIds.has(r.properties.routeId))
+    ? routes.filter((r) => highlightedRouteIdSet.has(r.properties.routeId))
     : [];
 
   // Get highlighted stop IDs from selected route
@@ -105,7 +111,7 @@ function MapInner({
     ? stops.filter((stop) => {
         // Show stops that belong to highlighted routes
         const stopRouteIds = stop.properties.routeIds || [];
-        return stopRouteIds.some((rid) => highlightedRouteIds.has(rid));
+        return stopRouteIds.some((rid) => highlightedRouteIdSet.has(rid));
       })
     : [];
 

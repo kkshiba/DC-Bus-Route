@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -14,6 +15,7 @@ const navLinks = [
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -55,20 +57,47 @@ export function Header() {
                   {link.label}
                 </Link>
               ))}
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="ml-2 p-2 rounded-md hover:bg-primary-500 transition-colors"
+                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
             </nav>
 
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2 rounded-md hover:bg-primary-500 transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
+            {/* Mobile Controls */}
+            <div className="md:hidden flex items-center gap-1">
+              {/* Mobile Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-md hover:bg-primary-500 transition-colors"
+                aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
+              {/* Mobile Menu Button */}
+              <button
+                className="p-2 rounded-md hover:bg-primary-500 transition-colors"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -87,7 +116,7 @@ export function Header() {
 
         {/* Slide-out Panel */}
         <div
-          className={`absolute top-16 right-0 w-64 h-[calc(100vh-4rem)] bg-white shadow-xl transform transition-transform duration-300 ${
+          className={`absolute top-16 right-0 w-64 h-[calc(100vh-4rem)] bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ${
             mobileMenuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -99,13 +128,30 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={`px-4 py-3 rounded-md transition-colors ${
                   isActive(link.href)
-                    ? "bg-primary-100 text-primary-700 font-semibold border-l-4 border-primary-600"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 font-semibold border-l-4 border-primary-600"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 {link.label}
               </Link>
             ))}
+            {/* Mobile Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="mt-4 px-4 py-3 rounded-md flex items-center gap-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {resolvedTheme === "dark" ? (
+                <>
+                  <Sun className="w-5 h-5" />
+                  <span>Light Mode</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-5 h-5" />
+                  <span>Dark Mode</span>
+                </>
+              )}
+            </button>
           </nav>
         </div>
       </div>
