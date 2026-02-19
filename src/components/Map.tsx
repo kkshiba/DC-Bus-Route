@@ -14,9 +14,12 @@ interface MapProps {
   routes: GeoJSONRoute[];
   stops: GeoJSONStop[];
   selectedRoute?: RouteResult | null;
+  highlightedRouteId?: string | null; // Single route to highlight (from ?route= param)
+  highlightedRouteIds?: string[]; // Multiple routes to highlight (for multi-select)
   userLocation?: { lat: number; lng: number } | null;
   onStopClick?: (stop: GeoJSONStop) => void;
   className?: string;
+  showAllRoutes?: boolean; // If false, only show selected/highlighted routes
 }
 
 // The actual map component that uses Leaflet + OpenStreetMap
@@ -24,9 +27,12 @@ function MapInner({
   routes,
   stops,
   selectedRoute,
+  highlightedRouteId,
+  highlightedRouteIds = [],
   userLocation,
   onStopClick,
   className,
+  showAllRoutes = false,
 }: MapProps) {
   const [mapReady, setMapReady] = useState(false);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
@@ -65,10 +71,26 @@ function MapInner({
 
   const { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker } = ReactLeaflet;
 
-  // Get highlighted route IDs from selected route
-  const highlightedRouteIds = new Set(
-    selectedRoute?.segments.map((s) => s.routeId) || []
-  );
+  // Get highlighted route IDs from selected route, single highlighted route, or multi-select
+  const highlightedRouteIdSet = new Set<string>();
+  if (selectedRoute) {
+    selectedRoute.segments.forEach((s) => highlightedRouteIdSet.add(s.routeId));
+  }
+  if (highlightedRouteId) {
+    highlightedRouteIdSet.add(highlightedRouteId);
+  }
+  // Add multi-select routes
+  for (const id of highlightedRouteIds) {
+    highlightedRouteIdSet.add(id);
+  }
+
+  // Determine which routes to show
+  const hasSelection = highlightedRouteIdSet.size > 0;
+  const routesToShow = showAllRoutes
+    ? routes
+    : hasSelection
+    ? routes.filter((r) => highlightedRouteIdSet.has(r.properties.routeId))
+    : [];
 
   // Get highlighted stop IDs from selected route
   const highlightedStopIds = new Set<string>();
@@ -82,27 +104,30 @@ function MapInner({
     }
   }
 
+  // Determine which stops to show
+  const stopsToShow = showAllRoutes
+    ? stops
+    : hasSelection
+    ? stops.filter((stop) => {
+        // Show stops that belong to highlighted routes
+        const stopRouteIds = stop.properties.routeIds || [];
+        return stopRouteIds.some((rid) => highlightedRouteIdSet.has(rid));
+      })
+    : [];
+
   // Create custom icons
-  const createIcon = (color: string) =>
+  const createIcon = (color: string, size: number = 24) =>
     L.divIcon({
       className: "custom-marker",
-      html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
+      html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
     });
 
-  const greenIcon = createIcon("#22c55e");
-  const redIcon = createIcon("#ef4444");
-  const yellowIcon = createIcon("#eab308");
-  const blueIcon = createIcon("#3b82f6");
-  const defaultIcon = L.icon({
-    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  });
+  const greenIcon = createIcon("#22c55e", 28);
+  const redIcon = createIcon("#ef4444", 28);
+  const yellowIcon = createIcon("#eab308", 28);
+  const defaultStopIcon = createIcon("#6b7280", 16);
 
   const center: [number, number] = userLocation
     ? [userLocation.lat, userLocation.lng]
@@ -126,8 +151,7 @@ function MapInner({
         />
 
         {/* Draw route lines */}
-        {routes.map((route) => {
-          const isHighlighted = highlightedRouteIds.has(route.properties.routeId);
+        {routesToShow.map((route) => {
           const positions: [number, number][] = route.geometry.coordinates.map(
             (coord) => [coord[1], coord[0]]
           );
@@ -138,21 +162,20 @@ function MapInner({
               positions={positions}
               pathOptions={{
                 color: route.properties.color,
-                weight: isHighlighted ? 5 : 3,
-                opacity: isHighlighted ? 1 : 0.5,
-                dashArray: isHighlighted ? undefined : "5, 10",
+                weight: 5,
+                opacity: 0.9,
               }}
             />
           );
         })}
 
         {/* Draw stop markers */}
-        {stops.map((stop) => {
+        {stopsToShow.map((stop) => {
           const coords = geoJSONToCoordinates(stop.geometry.coordinates);
           const position: [number, number] = [coords.lat, coords.lng];
 
           // Determine marker icon based on role in selected route
-          let icon: L.Icon | L.DivIcon = defaultIcon;
+          let icon = defaultStopIcon;
           if (selectedRoute) {
             const isBoarding =
               selectedRoute.segments[0]?.boardingStop.properties.stopId ===
