@@ -19,7 +19,9 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Map from "@/components/Map";
+import { TabbedSidePanel } from "@/components/TabbedSidePanel";
 import { RoutesSidePanel } from "@/components/RoutesSidePanel";
+import { useNavigationStore } from "@/stores/navigation-store";
 import { loadRouteData, getRawGeoJSON, getOrderedStopsForRoute } from "@/lib/data-loader";
 import { findRoute, getRouteDirections } from "@/lib/route-algorithm";
 import { formatDistance, formatDuration } from "@/lib/geo-utils";
@@ -39,6 +41,9 @@ function RouteMapContent() {
   const startParam = searchParams.get("start") || "";
   const destinationParam = searchParams.get("destination") || "";
   const routeParam = searchParams.get("route") || ""; // Single route to display
+
+  // Navigation store for active navigation
+  const { session, planningStatus } = useNavigationStore();
 
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<RouteResult | null>(null);
@@ -239,9 +244,9 @@ function RouteMapContent() {
 
   return (
     <div className="flex h-[calc(100dvh-4rem)] overflow-hidden">
-      {/* Routes Side Panel (Left) */}
+      {/* Tabbed Side Panel (Left) - Routes + Navigate */}
       <div className="hidden md:block">
-        <RoutesSidePanel
+        <TabbedSidePanel
           selectedRouteIds={selectedRouteIds}
           onSelectionChange={setSelectedRouteIds}
         />
@@ -252,9 +257,13 @@ function RouteMapContent() {
         <Map
           routes={routes}
           stops={stops}
-          selectedRoute={selectedRoute}
+          selectedRoute={session?.selectedRoute || selectedRoute}
           highlightedRouteId={routeParam || undefined}
-          highlightedRouteIds={selectedRouteIds}
+          highlightedRouteIds={
+            planningStatus === "navigating" && session
+              ? session.selectedRoute.segments.map((s) => s.routeId)
+              : selectedRouteIds
+          }
           userLocation={userLocation}
           className="w-full h-full"
         />

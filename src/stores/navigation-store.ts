@@ -9,14 +9,44 @@ import {
   calculateDistanceRemaining,
   isNearMilestone,
 } from "@/lib/navigation-types";
-import { estimateDuration } from "@/lib/geo-utils";
+import { estimateDuration, haversineDistance } from "@/lib/geo-utils";
+
+// Extended location type with optional name
+export interface NamedLocation extends Coordinates {
+  name?: string;
+}
+
+// Planning flow status
+export type PlanningStatus = "idle" | "planning" | "selecting" | "navigating";
 
 interface NavigationStore {
-  // State
+  // Trip Planning State
+  planningStatus: PlanningStatus;
+  origin: NamedLocation | null;
+  destination: NamedLocation | null;
+  routeOptions: RouteResult[];
+  walkingDistanceToFirstStop: number;
+  waitingStartedAt: Date | null;
+  currentRideIndex: number;
+
+  // Navigation State
   session: NavigationSession | null;
   isNavigating: boolean;
 
-  // Actions
+  // Trip Planning Actions
+  setOrigin: (location: NamedLocation) => void;
+  setDestination: (location: NamedLocation) => void;
+  setRouteOptions: (options: RouteResult[]) => void;
+  selectRoute: (route: RouteResult) => void;
+  setPlanningStatus: (status: PlanningStatus) => void;
+
+  // Milestone-based Status Updates
+  markAtStop: () => void;
+  markOnBus: () => void;
+  markDroppedOff: () => void;
+  markAtTransfer: () => void;
+
+  // Core Navigation Actions
   startNavigation: (route: RouteResult) => void;
   updateLocation: (coords: Coordinates) => void;
   completeMilestone: (milestoneId: string) => void;
@@ -30,12 +60,132 @@ interface NavigationStore {
   getNextMilestone: () => NavigationMilestone | null;
   getRemainingMilestones: () => NavigationMilestone[];
   getCompletedMilestones: () => NavigationMilestone[];
+  getCurrentRide: () => { routeId: string; routeName: string; routeColor: string } | null;
+  getDropOffStop: () => NavigationMilestone | null;
+  getProgress: () => { current: number; total: number };
 }
 
 export const useNavigationStore = create<NavigationStore>((set, get) => ({
-  // Initial state
+  // Initial state - Trip Planning
+  planningStatus: "idle",
+  origin: null,
+  destination: null,
+  routeOptions: [],
+  walkingDistanceToFirstStop: 0,
+  waitingStartedAt: null,
+  currentRideIndex: 0,
+
+  // Initial state - Navigation
   session: null,
   isNavigating: false,
+
+  // Trip Planning Actions
+  setOrigin: (location: NamedLocation) => {
+    set({ origin: location });
+  },
+
+  setDestination: (location: NamedLocation) => {
+    set({ destination: location });
+  },
+
+  setRouteOptions: (options: RouteResult[]) => {
+    set({ routeOptions: options, planningStatus: "selecting" });
+  },
+
+  setPlanningStatus: (status: PlanningStatus) => {
+    set({ planningStatus: status });
+  },
+
+  selectRoute: (route: RouteResult) => {
+    const { origin } = get();
+    let walkingDistance = 0;
+
+    // Calculate walking distance to first stop
+    if (origin && route.segments.length > 0) {
+      const firstStop = route.segments[0].boardingStop;
+      walkingDistance = haversineDistance(origin, {
+        lat: firstStop.geometry.coordinates[1],
+        lng: firstStop.geometry.coordinates[0],
+      });
+    }
+
+    set({
+      walkingDistanceToFirstStop: walkingDistance,
+      currentRideIndex: 0,
+      planningStatus: "navigating",
+    });
+
+    // Start navigation with the selected route
+    get().startNavigation(route);
+  },
+
+  // Milestone-based Status Updates
+  markAtStop: () => {
+    const { session } = get();
+    if (!session) return;
+
+    set({
+      session: {
+        ...session,
+        status: "waiting_for_bus",
+      },
+      waitingStartedAt: new Date(),
+    });
+  },
+
+  markOnBus: () => {
+    const { session } = get();
+    if (!session) return;
+
+    set({
+      session: {
+        ...session,
+        status: "riding",
+      },
+      waitingStartedAt: null,
+    });
+  },
+
+  markDroppedOff: () => {
+    const { session, currentRideIndex } = get();
+    if (!session) return;
+
+    const totalRides = session.selectedRoute.segments.length;
+    const isLastRide = currentRideIndex >= totalRides - 1;
+
+    if (isLastRide) {
+      // Completed journey
+      set({
+        session: {
+          ...session,
+          status: "completed",
+        },
+        isNavigating: false,
+      });
+    } else {
+      // Need to transfer to next ride
+      set({
+        session: {
+          ...session,
+          status: "transferring",
+        },
+        currentRideIndex: currentRideIndex + 1,
+      });
+    }
+  },
+
+  markAtTransfer: () => {
+    const { session } = get();
+    if (!session) return;
+
+    set({
+      session: {
+        ...session,
+        status: "waiting_for_bus",
+      },
+      waitingStartedAt: new Date(),
+    });
+  },
 
   // Start a new navigation session
   startNavigation: (route: RouteResult) => {
@@ -162,6 +312,13 @@ export const useNavigationStore = create<NavigationStore>((set, get) => ({
   // Reset all navigation state
   reset: () => {
     set({
+      planningStatus: "idle",
+      origin: null,
+      destination: null,
+      routeOptions: [],
+      walkingDistanceToFirstStop: 0,
+      waitingStartedAt: null,
+      currentRideIndex: 0,
       session: null,
       isNavigating: false,
     });
@@ -193,5 +350,53 @@ export const useNavigationStore = create<NavigationStore>((set, get) => ({
     const { session } = get();
     if (!session) return [];
     return session.milestones.filter((m) => m.completed);
+  },
+
+  // Get current ride info
+  getCurrentRide: () => {
+    const { session, currentRideIndex } = get();
+    if (!session) return null;
+    const segment = session.selectedRoute.segments[currentRideIndex];
+    if (!segment) return null;
+    return {
+      routeId: segment.routeId,
+      routeName: segment.routeName,
+      routeColor: segment.routeColor,
+    };
+  },
+
+  // Get the drop-off stop for current ride
+  getDropOffStop: () => {
+    const { session, currentRideIndex } = get();
+    if (!session) return null;
+    const segment = session.selectedRoute.segments[currentRideIndex];
+    if (!segment) return null;
+
+    // Find the alighting milestone for this segment
+    const alightingStop = session.milestones.find(
+      (m) =>
+        m.type === "alighting" ||
+        (m.type === "transfer" && m.routeId === segment.routeId &&
+         m.stopId === segment.alightingStop.properties.stopId)
+    );
+
+    // If no explicit alighting, look for the last stop on this route segment
+    if (!alightingStop) {
+      return session.milestones.find(
+        (m) => m.stopId === segment.alightingStop.properties.stopId
+      ) || null;
+    }
+
+    return alightingStop;
+  },
+
+  // Get progress through multi-ride trip
+  getProgress: () => {
+    const { session, currentRideIndex } = get();
+    if (!session) return { current: 0, total: 0 };
+    return {
+      current: currentRideIndex + 1,
+      total: session.selectedRoute.segments.length,
+    };
   },
 }));
