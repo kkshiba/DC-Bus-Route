@@ -42,6 +42,13 @@ export interface GeoJSONFeatureCollection {
   features: (GeoJSONRoute | GeoJSONStop)[];
 }
 
+// Walking transfer info between segments
+export interface WalkingTransfer {
+  fromStop: GeoJSONStop;
+  toStop: GeoJSONStop;
+  distanceMeters: number;
+}
+
 // Route Segment (one leg of a journey)
 export interface RouteSegment {
   routeId: string;
@@ -52,6 +59,7 @@ export interface RouteSegment {
   intermediateStops: GeoJSONStop[];
   stopsCount: number;
   distanceKm: number;
+  walkToNextStop?: WalkingTransfer; // Walking transfer to next segment (if any)
 }
 
 // Complete Route Result

@@ -7,6 +7,7 @@ import {
   RouteResult,
   RouteSegment,
   RouteSearchRequest,
+  WalkingTransfer,
 } from "./types";
 import {
   findNearestStop,
@@ -146,24 +147,100 @@ function findSingleRoute(
   };
 }
 
+// Transfer option type for internal use
+interface TransferOption {
+  dropOffStop: GeoJSONStop;
+  walkToStop?: GeoJSONStop; // Only for walking transfers
+  walkingDistance?: number; // km, only for walking transfers
+  firstRouteId: string;
+  secondRouteId: string;
+  score: number;
+}
+
+/**
+ * Find walking transfers (fallback when no shared-stop transfer exists)
+ * Searches for nearby stops within walking distance that connect to destination
+ */
+function findWalkingTransfers(
+  boardingStop: GeoJSONStop,
+  alightingStop: GeoJSONStop,
+  routeData: ParsedRouteData,
+  allStops: GeoJSONStop[],
+  maxWalkingKm: number = 0.3 // 300 meters default
+): TransferOption[] {
+  const walkingOptions: TransferOption[] = [];
+  const boardingRoutes = boardingStop.properties.routeIds;
+  const alightingRoutes = alightingStop.properties.routeIds;
+
+  // For each route from boarding stop
+  for (const firstRouteId of boardingRoutes) {
+    const firstRouteStops = routeData.routeStops.get(firstRouteId) || [];
+
+    // For each stop on first route (potential drop-off point)
+    for (const dropOffStop of firstRouteStops) {
+      // Skip if it's the boarding stop itself
+      if (dropOffStop.properties.stopId === boardingStop.properties.stopId) continue;
+
+      // Find nearby stops within walking distance
+      const dropOffCoords: Coordinates = {
+        lat: dropOffStop.geometry.coordinates[1],
+        lng: dropOffStop.geometry.coordinates[0],
+      };
+      const nearbyStops = findStopsWithinRadius(dropOffCoords, allStops, maxWalkingKm);
+
+      // Check each nearby stop for routes to destination
+      for (const { stop: nearbyStop, distance: walkingDistance } of nearbyStops) {
+        // Skip if same stop (that's a shared transfer, not walking)
+        if (nearbyStop.properties.stopId === dropOffStop.properties.stopId) continue;
+
+        for (const secondRouteId of nearbyStop.properties.routeIds) {
+          // Skip if same route
+          if (secondRouteId === firstRouteId) continue;
+          // Check if this route reaches the destination
+          if (!alightingRoutes.includes(secondRouteId)) continue;
+
+          // Valid walking transfer found!
+          const firstSegmentStops = getStopsBetween(firstRouteStops, boardingStop, dropOffStop);
+          const secondRouteStops = routeData.routeStops.get(secondRouteId) || [];
+          const secondSegmentStops = getStopsBetween(secondRouteStops, nearbyStop, alightingStop);
+
+          const routeDistance =
+            calculateRouteDistance(firstSegmentStops) +
+            calculateRouteDistance(secondSegmentStops);
+          // Add walking penalty (walking is 2x more "expensive" than bus distance)
+          const walkingPenalty = walkingDistance * 2;
+
+          walkingOptions.push({
+            dropOffStop,
+            walkToStop: nearbyStop,
+            walkingDistance,
+            firstRouteId,
+            secondRouteId,
+            score: routeDistance + walkingPenalty,
+          });
+        }
+      }
+    }
+  }
+
+  return walkingOptions;
+}
+
 /**
  * Find transfer route (double ride)
+ * First tries shared-stop transfers, falls back to walking transfers if none found
  */
 function findTransferRoute(
   boardingStop: GeoJSONStop,
   alightingStop: GeoJSONStop,
-  routeData: ParsedRouteData
+  routeData: ParsedRouteData,
+  allStops?: GeoJSONStop[] // Optional: needed for walking transfers
 ): RouteResult | null {
   const boardingRoutes = boardingStop.properties.routeIds;
   const alightingRoutes = alightingStop.properties.routeIds;
 
-  // Find all possible transfer points
-  const transferOptions: {
-    transferStop: GeoJSONStop;
-    firstRouteId: string;
-    secondRouteId: string;
-    score: number;
-  }[] = [];
+  // Find all possible transfer points (shared stops first)
+  const transferOptions: TransferOption[] = [];
 
   // For each route from boarding stop
   for (const firstRouteId of boardingRoutes) {
@@ -201,7 +278,7 @@ function findTransferRoute(
             calculateRouteDistance(secondSegmentStops);
 
           transferOptions.push({
-            transferStop: potentialTransfer,
+            dropOffStop: potentialTransfer,
             firstRouteId,
             secondRouteId,
             score: totalDistance,
@@ -209,6 +286,18 @@ function findTransferRoute(
         }
       }
     }
+  }
+
+  // If no shared-stop transfers found, try walking transfers (fallback)
+  if (transferOptions.length === 0 && allStops) {
+    const walkingTransfers = findWalkingTransfers(
+      boardingStop,
+      alightingStop,
+      routeData,
+      allStops,
+      0.3 // 300 meters max walking distance
+    );
+    transferOptions.push(...walkingTransfers);
   }
 
   if (transferOptions.length === 0) return null;
@@ -221,24 +310,40 @@ function findTransferRoute(
     best.firstRouteId,
     routeData,
     boardingStop,
-    best.transferStop
+    best.dropOffStop
   );
+
+  // Determine the boarding stop for second segment
+  const secondBoardingStop = best.walkToStop || best.dropOffStop;
+
   const secondSegment = createSegment(
     best.secondRouteId,
     routeData,
-    best.transferStop,
+    secondBoardingStop,
     alightingStop
   );
 
+  // Add walking transfer info to first segment if this is a walking transfer
+  if (best.walkToStop && best.walkingDistance) {
+    firstSegment.walkToNextStop = {
+      fromStop: best.dropOffStop,
+      toStop: best.walkToStop,
+      distanceMeters: Math.round(best.walkingDistance * 1000),
+    };
+  }
+
   const totalDistance = firstSegment.distanceKm + secondSegment.distanceKm;
+  const walkingTimeMinutes = best.walkingDistance
+    ? Math.ceil((best.walkingDistance / 5) * 60) // 5 km/h walking speed
+    : 0;
 
   return {
     type: "transfer",
     segments: [firstSegment, secondSegment],
-    totalStops: firstSegment.stopsCount + secondSegment.stopsCount - 1, // -1 for shared transfer stop
-    totalDistanceKm: totalDistance,
-    transferPoints: [best.transferStop],
-    estimatedDuration: estimateDuration(totalDistance) + 5, // +5 min for transfer wait
+    totalStops: firstSegment.stopsCount + secondSegment.stopsCount - (best.walkToStop ? 0 : 1),
+    totalDistanceKm: totalDistance + (best.walkingDistance || 0),
+    transferPoints: best.walkToStop ? [best.dropOffStop, best.walkToStop] : [best.dropOffStop],
+    estimatedDuration: estimateDuration(totalDistance) + 5 + walkingTimeMinutes, // +5 min wait + walking
   };
 }
 
@@ -273,10 +378,10 @@ export function findRoute(
     return singleRoute;
   }
 
-  // Try transfer route
+  // Try transfer route (includes walking transfers as fallback)
   const maxTransfers = request.maxTransfers ?? 1;
   if (maxTransfers >= 1) {
-    const transferRoute = findTransferRoute(boardingStop, alightingStop, routeData);
+    const transferRoute = findTransferRoute(boardingStop, alightingStop, routeData, allStops);
     if (transferRoute) {
       return transferRoute;
     }
@@ -328,11 +433,12 @@ export function findAllRoutes(
         results.push(singleRoute);
       }
 
-      // Try transfer route
+      // Try transfer route (includes walking transfers as fallback)
       const transferRoute = findTransferRoute(
         boardingStop,
         alightingStop,
-        routeData
+        routeData,
+        allStops
       );
       if (transferRoute) {
         results.push(transferRoute);
@@ -352,7 +458,22 @@ export function findAllRoutes(
   );
 
   return uniqueResults
-    .sort((a, b) => a.totalDistanceKm - b.totalDistanceKm)
+    .sort((a, b) => {
+      // Priority 1: Direct routes first (type: "single")
+      if (a.type !== b.type) {
+        return a.type === "single" ? -1 : 1;
+      }
+
+      // Priority 2: Non-walking transfers before walking transfers
+      const aHasWalking = a.segments.some((s) => s.walkToNextStop);
+      const bHasWalking = b.segments.some((s) => s.walkToNextStop);
+      if (aHasWalking !== bHasWalking) {
+        return aHasWalking ? 1 : -1;
+      }
+
+      // Priority 3: Sort by estimated duration (faster first)
+      return (a.estimatedDuration || 0) - (b.estimatedDuration || 0);
+    })
     .slice(0, maxResults);
 }
 
@@ -384,6 +505,13 @@ export function getRouteDirections(result: RouteResult): string[] {
     directions.push(
       `Alight at ${segment.alightingStop.properties.stopName}`
     );
+
+    // Add walking transfer instruction if needed
+    if (segment.walkToNextStop) {
+      directions.push(
+        `Walk ${segment.walkToNextStop.distanceMeters}m to ${segment.walkToNextStop.toStop.properties.stopName}`
+      );
+    }
   }
 
   return directions;

@@ -16,6 +16,7 @@ export function RouteCard({ route, walkingDistance = 0, onSelect }: RouteCardPro
   const segments = route.segments;
   const firstSegment = segments[0];
   const lastSegment = segments[segments.length - 1];
+  const hasWalkingTransfer = segments.some((s) => s.walkToNextStop);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -28,10 +29,12 @@ export function RouteCard({ route, walkingDistance = 0, onSelect }: RouteCardPro
               className={`px-3 py-1 rounded-full text-xs font-semibold ${
                 isDirect
                   ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                  : hasWalkingTransfer
+                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
                   : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400"
               }`}
             >
-              {isDirect ? "Direct" : `${segments.length - 1} Transfer`}
+              {isDirect ? "Direct" : hasWalkingTransfer ? "Walk & Transfer" : `${segments.length - 1} Transfer`}
             </span>
 
             {/* Total stops */}
@@ -94,20 +97,63 @@ export function RouteCard({ route, walkingDistance = 0, onSelect }: RouteCardPro
             </div>
           </div>
 
-          {/* Transfer point(s) */}
-          {route.transferPoints.map((transfer) => (
-            <div key={transfer.properties.stopId} className="flex items-start gap-2">
-              <div className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <div className="w-2 h-2 rounded-full bg-orange-500" />
-              </div>
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Transfer at: </span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {transfer.properties.stopName}
-                </span>
-              </div>
-            </div>
-          ))}
+          {/* Transfer point(s) and walking instructions */}
+          {segments.map((segment, index) => {
+            // Show walking transfer if this segment requires walking to next stop
+            if (segment.walkToNextStop) {
+              return (
+                <div key={`walk-${index}`}>
+                  {/* Get off point */}
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-2 h-2 rounded-full bg-orange-500" />
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Get off at: </span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {segment.walkToNextStop.fromStop.properties.stopName}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Walking instruction */}
+                  <div className="flex items-start gap-2 mt-2">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Footprints className="w-3 h-3 text-blue-500" />
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Walk </span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
+                        {segment.walkToNextStop.distanceMeters}m
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400"> to </span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {segment.walkToNextStop.toStop.properties.stopName}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Show regular transfer point (shared stop)
+            if (index < segments.length - 1) {
+              return (
+                <div key={`transfer-${index}`} className="flex items-start gap-2">
+                  <div className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Transfer at: </span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      {segment.alightingStop.properties.stopName}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })}
 
           {/* Alighting */}
           <div className="flex items-start gap-2">

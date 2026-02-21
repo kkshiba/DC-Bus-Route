@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getHardcodedRouteData } from "./hardcoded-routes";
 import type {
   GeoJSONRoute,
   GeoJSONStop,
@@ -130,80 +131,25 @@ export async function loadAllStops(): Promise<GeoJSONStop[]> {
 export async function getOrderedStopsForRoute(
   routeId: string
 ): Promise<GeoJSONStop[]> {
-  const { data, error } = await supabase.rpc("get_route_stops", {
-    p_route_id: routeId,
-  });
-
-  if (error) {
-    console.error(`Error loading stops for route ${routeId}:`, error);
-    return [];
-  }
-
-  return (data as RouteStopResult[]).map((stop) => ({
-    type: "Feature" as const,
-    properties: {
-      stopId: stop.stop_id,
-      stopName: stop.stop_name,
-      routeIds: stop.route_ids || [],
-      order: stop.stop_order,
-      description: stop.description || undefined,
-    },
-    geometry: {
-      type: "Point" as const,
-      coordinates: [stop.lng, stop.lat] as [number, number],
-    },
-  }));
+  const data = getHardcodedRouteData();
+  return data.routeStops.get(routeId) || [];
 }
 
 /**
- * Load and parse route data from database
- * Returns the same ParsedRouteData structure for backward compatibility
+ * Load and parse route data from hardcoded JSON files
+ * Uses local data for reliable algorithm calculations
  */
 export async function loadRouteData(): Promise<ParsedRouteData> {
-  const [routesData, stopsData] = await Promise.all([
-    loadAllRoutes(),
-    loadAllStops(),
-  ]);
-
-  const routes = new Map<string, GeoJSONRoute>();
-  const stops = new Map<string, GeoJSONStop>();
-  const routeStops = new Map<string, GeoJSONStop[]>();
-  const stopRoutes = new Map<string, string[]>();
-
-  // Populate routes map
-  for (const route of routesData) {
-    routes.set(route.properties.routeId, route);
-    routeStops.set(route.properties.routeId, []);
-  }
-
-  // Populate stops map and stopRoutes
-  for (const stop of stopsData) {
-    stops.set(stop.properties.stopId, stop);
-    stopRoutes.set(stop.properties.stopId, stop.properties.routeIds);
-  }
-
-  // Fetch ordered stops for each route
-  const routeIds = Array.from(routes.keys());
-  const orderedStopsPromises = routeIds.map((routeId) =>
-    getOrderedStopsForRoute(routeId).then((orderedStops) => ({
-      routeId,
-      orderedStops,
-    }))
-  );
-
-  const orderedStopsResults = await Promise.all(orderedStopsPromises);
-  for (const { routeId, orderedStops } of orderedStopsResults) {
-    routeStops.set(routeId, orderedStops);
-  }
-
-  return { routes, stops, routeStops, stopRoutes };
+  return getHardcodedRouteData();
 }
 
 /**
  * Get raw GeoJSON data (for backward compatibility with Map component)
  */
 export async function getRawGeoJSON(): Promise<GeoJSONFeatureCollection> {
-  const [routes, stops] = await Promise.all([loadAllRoutes(), loadAllStops()]);
+  const data = getHardcodedRouteData();
+  const routes = Array.from(data.routes.values());
+  const stops = Array.from(data.stops.values());
 
   return {
     type: "FeatureCollection",
