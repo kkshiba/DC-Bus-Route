@@ -73,14 +73,16 @@ function buildRouteData(): ParsedRouteData {
   const stops = new Map<string, GeoJSONStop>();
   const routeStops = new Map<string, GeoJSONStop[]>();
   const stopRoutes = new Map<string, string[]>();
+  const stopAreas = new Map<string, Set<string>>(); // NEW: stopId -> areas
 
-  // First pass: collect which routes each stop is on
+  // First pass: collect which routes each stop is on AND which areas
   // KEY FIX: Use normalized stop name as ID instead of UUID
   const stopToRoutes = new Map<string, Set<string>>();
   const stopInfo = new Map<string, { name: string; lat: number; lng: number }>();
 
   for (const routeFile of allRouteFiles) {
     const routeId = `${routeFile.route_number}-${routeFile.time_period}`;
+    const area = routeFile.area; // Get area from route file
     for (const point of routeFile.points) {
       if (point.kind === "stop" && point.name) {
         const normalizedId = normalizeStopId(point.name);
@@ -93,6 +95,12 @@ function buildRouteData(): ParsedRouteData {
           });
         }
         stopToRoutes.get(normalizedId)!.add(routeId);
+
+        // Collect areas for each stop
+        if (!stopAreas.has(normalizedId)) {
+          stopAreas.set(normalizedId, new Set());
+        }
+        stopAreas.get(normalizedId)!.add(area);
       }
     }
   }
@@ -152,7 +160,7 @@ function buildRouteData(): ParsedRouteData {
     routeStops.set(routeId, routeStopList);
   }
 
-  return { routes, stops, routeStops, stopRoutes };
+  return { routes, stops, routeStops, stopRoutes, stopAreas };
 }
 
 let cachedData: ParsedRouteData | null = null;

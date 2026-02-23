@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { FooterWrapper } from "@/components/FooterWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { BusStatusBanner } from "@/components/BusStatusBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -75,6 +76,7 @@ export default function RootLayout({
           </a>
           <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
             <Header />
+            <BusStatusBanner />
             <main id="main-content" className="flex-1">
               {children}
             </main>

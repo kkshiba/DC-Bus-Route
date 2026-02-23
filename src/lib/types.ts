@@ -85,4 +85,5 @@ export interface ParsedRouteData {
   stops: Map<string, GeoJSONStop>;
   routeStops: Map<string, GeoJSONStop[]>; // routeId -> ordered stops
   stopRoutes: Map<string, string[]>; // stopId -> routeIds
+  stopAreas: Map<string, Set<string>>; // stopId -> areas (Toril, Mintal, etc.)
 }

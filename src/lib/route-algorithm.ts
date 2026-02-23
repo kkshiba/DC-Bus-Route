@@ -28,6 +28,7 @@ export function parseGeoJSONData(
   const stops = new Map<string, GeoJSONStop>();
   const routeStops = new Map<string, GeoJSONStop[]>();
   const stopRoutes = new Map<string, string[]>();
+  const stopAreas = new Map<string, Set<string>>(); // Area info not available in GeoJSON
 
   // First pass: separate routes and stops
   for (const feature of geojson.features) {
@@ -57,7 +58,7 @@ export function parseGeoJSONData(
     stopsArr.sort((a, b) => a.properties.order - b.properties.order);
   }
 
-  return { routes, stops, routeStops, stopRoutes };
+  return { routes, stops, routeStops, stopRoutes, stopAreas };
 }
 
 /**
