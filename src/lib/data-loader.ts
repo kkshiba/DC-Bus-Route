@@ -28,27 +28,32 @@ export interface RouteInfo {
 
 /**
  * Load basic route info for homepage display
+ * Uses hardcoded route data — no Supabase required
  */
 export async function loadRoutesList(): Promise<RouteInfo[]> {
-  const { data, error } = await supabase
-    .from("routes")
-    .select("route_id, route_number, name, area, time_period, color")
-    .order("route_number")
-    .order("time_period");
+  const data = getHardcodedRouteData();
 
-  if (error) {
-    console.error("Error loading routes list:", error);
-    return [];
-  }
+  const routes = Array.from(data.routes.values()).map((route) => {
+    const routeId = route.properties.routeId; // e.g. "R103-AM"
+    const parts = routeId.split("-");
+    const timePeriod = parts[parts.length - 1]; // "AM" or "PM"
+    const routeNumber = parts.slice(0, -1).join("-"); // "R103"
 
-  return data.map((route) => ({
-    routeId: route.route_id,
-    routeNumber: route.route_number,
-    name: route.name,
-    area: route.area,
-    timePeriod: route.time_period,
-    color: route.color,
-  }));
+    return {
+      routeId,
+      routeNumber,
+      name: route.properties.routeName,
+      area: route.properties.description?.split(" (")[0] ?? null,
+      timePeriod,
+      color: route.properties.color,
+    };
+  });
+
+  return routes.sort((a, b) => {
+    if (a.routeNumber !== b.routeNumber)
+      return a.routeNumber.localeCompare(b.routeNumber);
+    return (a.timePeriod || "").localeCompare(b.timePeriod || "");
+  });
 }
 
 /**
