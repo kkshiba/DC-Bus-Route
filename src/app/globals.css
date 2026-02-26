@@ -84,3 +84,112 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom Mobile Animations */
+@keyframes slide-up-smooth {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down-smooth {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+  }
+}
+
+@keyframes drag-hint {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(4px);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up-smooth {
+  animation: slide-up-smooth 0.3s ease-out forwards;
+}
+
+.animate-slide-down-smooth {
+  animation: slide-down-smooth 0.25s ease-in forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.25s ease-in forwards;
+}
+
+.animate-fade-slide-up {
+  animation: fade-slide-up 0.3s ease-out forwards;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.animate-drag-hint {
+  animation: drag-hint 1.5s ease-in-out infinite;
+}
+
+/* Stagger animation delays for route cards */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* FAB button enhanced styles */
+.fab-button {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.fab-button:active {
+  transform: scale(0.92);
+}
+
+.fab-button:hover:not(:active) {
+  transform: scale(1.03);
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.2);
+}

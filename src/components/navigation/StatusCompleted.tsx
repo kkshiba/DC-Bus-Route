@@ -1,13 +1,27 @@
 "use client";
 
-import { PartyPopper, MapPin, Clock, Bus, Home, RotateCcw } from "lucide-react";
+import { useEffect } from "react";
+import { PartyPopper, MapPin, Clock, Bus, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigationStore } from "@/stores/navigation-store";
-import { useRouter } from "next/navigation";
-
+import { useFeedbackStore } from "@/stores/feedback-store";
+import { extractTripDataForFeedback } from "@/lib/feedback-service";
 export function StatusCompleted() {
-  const router = useRouter();
-  const { session, waitingStartedAt, reset } = useNavigationStore();
+  const { session, reset } = useNavigationStore();
+  const { openFeedbackModal, hasSubmitted } = useFeedbackStore();
+
+  // Trigger feedback modal when component mounts (trip completes)
+  useEffect(() => {
+    if (session && session.status === "completed" && !hasSubmitted) {
+      // Small delay to let the completion animation play
+      const timer = setTimeout(() => {
+        const tripData = extractTripDataForFeedback(session);
+        openFeedbackModal(tripData);
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [session, openFeedbackModal, hasSubmitted]);
 
   if (!session) {
     return null;
@@ -21,13 +35,8 @@ export function StatusCompleted() {
   const endTime = new Date();
   const totalMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
 
-  const handleStartNewTrip = () => {
+  const handleBack = () => {
     reset();
-  };
-
-  const handleGoHome = () => {
-    reset();
-    router.push("/");
   };
 
   return (
@@ -87,22 +96,14 @@ export function StatusCompleted() {
         </p>
       </div>
 
-      {/* Action Buttons */}
-      <div className="pt-4 space-y-3">
+      {/* Action Button */}
+      <div className="pt-4">
         <Button
-          onClick={handleStartNewTrip}
+          onClick={handleBack}
           className="w-full h-14 text-lg font-semibold bg-primary-600 hover:bg-primary-700"
         >
-          <RotateCcw className="w-5 h-5 mr-2" />
-          Start New Trip
-        </Button>
-        <Button
-          onClick={handleGoHome}
-          variant="outline"
-          className="w-full h-12"
-        >
-          <Home className="w-5 h-5 mr-2" />
-          Back to Home
+          <ArrowLeft className="w-5 h-5 mr-2" />
+          Back
         </Button>
       </div>
     </div>

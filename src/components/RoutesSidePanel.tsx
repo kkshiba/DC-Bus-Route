@@ -91,21 +91,24 @@ export function RoutesSidePanel({
               <div className="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
             </div>
           ) : (
-            Object.entries(groupedRoutes).map(([routeNumber, routeGroup]) => {
+            Object.entries(groupedRoutes).map(([routeNumber, routeGroup], index) => {
               const isAnySelected = isGroupPartiallySelected(routeGroup);
               const primaryRoute = routeGroup[0];
+              const staggerClass = index < 8 ? `stagger-${index + 1}` : '';
 
               return (
                 <div
                   key={routeNumber}
                   className={`
                     rounded-xl overflow-hidden border-2 transition-all duration-200
+                    opacity-0 animate-fade-slide-up ${staggerClass}
                     ${
                       isAnySelected
                         ? "border-primary-300 dark:border-primary-600 shadow-md"
                         : "border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600"
                     }
                   `}
+                  style={{ animationFillMode: 'forwards' }}
                 >
                   {/* Route Card Header */}
                   <div
@@ -285,21 +288,24 @@ export function RoutesSidePanel({
                 <div className="w-8 h-8 border-3 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
               </div>
             ) : (
-              Object.entries(groupedRoutes).map(([routeNumber, routeGroup]) => {
+              Object.entries(groupedRoutes).map(([routeNumber, routeGroup], index) => {
                 const isAnySelected = isGroupPartiallySelected(routeGroup);
                 const primaryRoute = routeGroup[0];
+                const staggerClass = index < 8 ? `stagger-${index + 1}` : '';
 
                 return (
                   <div
                     key={routeNumber}
                     className={`
                       rounded-xl overflow-hidden border-2 transition-all duration-200
+                      opacity-0 animate-fade-slide-up ${staggerClass}
                       ${
                         isAnySelected
                           ? "border-primary-300 dark:border-primary-600 shadow-md"
                           : "border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600"
                       }
                     `}
+                    style={{ animationFillMode: 'forwards' }}
                   >
                     {/* Route Card Header */}
                     <div

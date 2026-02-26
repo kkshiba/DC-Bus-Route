@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Map, MessageSquare, Bus } from "lucide-react";
+import { Map, MessageSquare, Bus, Navigation, MapPin, Clock, HelpCircle } from "lucide-react";
 
 const pages = [
   {
@@ -14,6 +14,15 @@ const pages = [
     iconColor: "text-blue-600 dark:text-blue-400",
   },
   {
+    href: "/route-map?tab=navigate",
+    icon: Navigation,
+    title: "Start Navigation",
+    description: "Get turn-by-turn directions",
+    color: "from-green-500 to-green-600",
+    iconBg: "bg-green-100 dark:bg-green-900/30",
+    iconColor: "text-green-600 dark:text-green-400",
+  },
+  {
     href: "/chatbot",
     icon: MessageSquare,
     title: "AI Chatbot",
@@ -21,6 +30,29 @@ const pages = [
     color: "from-purple-500 to-purple-600",
     iconBg: "bg-purple-100 dark:bg-purple-900/30",
     iconColor: "text-purple-600 dark:text-purple-400",
+  },
+];
+
+const userGuideTips = [
+  {
+    icon: Map,
+    title: "Browse Routes",
+    description: "View all available bus routes on the interactive map",
+  },
+  {
+    icon: MapPin,
+    title: "Plan Your Trip",
+    description: "Enter your origin and destination to find the best route",
+  },
+  {
+    icon: Clock,
+    title: "Real-time Navigation",
+    description: "Follow step-by-step directions with live updates",
+  },
+  {
+    icon: HelpCircle,
+    title: "Need Help?",
+    description: "Ask the AI Chatbot for route recommendations",
   },
 ];
 
@@ -41,7 +73,7 @@ export default function Home() {
       </div>
 
       {/* Page Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
         {pages.map((page) => (
           <Link
             key={page.href}
@@ -72,6 +104,31 @@ export default function Home() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* User Guide Section */}
+      <div className="mt-12 w-full max-w-4xl">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-6">
+          Quick Guide
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {userGuideTips.map((tip, index) => (
+            <div
+              key={index}
+              className="flex flex-col items-center text-center p-4 rounded-xl bg-white/50 dark:bg-gray-800/50 border border-gray-200/50 dark:border-gray-700/50"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
+                <tip.icon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                {tip.title}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {tip.description}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Footer tagline */}

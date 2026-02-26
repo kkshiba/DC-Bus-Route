@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,7 +15,10 @@ import {
   Circle,
   X,
   ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+
+type SheetState = 'closed' | 'half' | 'full';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Map from "@/components/Map";
@@ -65,8 +68,8 @@ function RouteMapContent() {
   // Multi-select route state
   const [selectedRouteIds, setSelectedRouteIds] = useState<string[]>([]);
 
-  // Mobile drawer state
-  const [mobileRoutesOpen, setMobileRoutesOpen] = useState(false);
+  // Mobile drawer state with snap points
+  const [sheetState, setSheetState] = useState<SheetState>('closed');
 
   // Load route data from Supabase
   useEffect(() => {
@@ -216,6 +219,99 @@ function RouteMapContent() {
     return null;
   }, [displayedRoute]);
 
+  // Bottom sheet multi-state gesture handling
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [sheetTranslateY, setSheetTranslateY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const touchStartY = useRef(0);
+  const touchCurrentY = useRef(0);
+
+  // Sheet height constants (in vh)
+  const SHEET_HALF_HEIGHT = 45;
+  const SHEET_FULL_HEIGHT = 80;
+
+  // Get current height based on state
+  const getSheetHeight = useCallback((state: SheetState) => {
+    switch (state) {
+      case 'half': return SHEET_HALF_HEIGHT;
+      case 'full': return SHEET_FULL_HEIGHT;
+      default: return 0;
+    }
+  }, []);
+
+  // Transition to a new sheet state with animation
+  const transitionTo = useCallback((newState: SheetState) => {
+    if (newState === 'closed') {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setSheetState('closed');
+        setIsAnimating(false);
+      }, 250);
+    } else {
+      setSheetState(newState);
+    }
+    setSheetTranslateY(0);
+  }, []);
+
+  // Toggle between half and full states
+  const toggleSheetSize = useCallback(() => {
+    if (sheetState === 'half') {
+      setSheetState('full');
+    } else if (sheetState === 'full') {
+      setSheetState('half');
+    }
+  }, [sheetState]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = e.touches[0].clientY;
+    setIsDragging(true);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging) return;
+    touchCurrentY.current = e.touches[0].clientY;
+    const deltaY = touchCurrentY.current - touchStartY.current;
+    setSheetTranslateY(deltaY);
+  }, [isDragging]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+    const deltaY = sheetTranslateY;
+    const threshold = 80; // px threshold for state change
+
+    if (sheetState === 'full') {
+      if (deltaY > threshold) {
+        // Swipe down from full → half
+        transitionTo('half');
+      } else if (deltaY < -threshold) {
+        // Already at full, do nothing (or could add overscroll effect)
+        setSheetTranslateY(0);
+      } else {
+        setSheetTranslateY(0);
+      }
+    } else if (sheetState === 'half') {
+      if (deltaY > threshold) {
+        // Swipe down from half → close
+        transitionTo('closed');
+      } else if (deltaY < -threshold) {
+        // Swipe up from half → full
+        transitionTo('full');
+      } else {
+        setSheetTranslateY(0);
+      }
+    }
+  }, [sheetTranslateY, sheetState, transitionTo]);
+
+  // Reset sheet position when state changes
+  useEffect(() => {
+    if (sheetState !== 'closed') {
+      setSheetTranslateY(0);
+      setIsAnimating(false);
+    }
+  }, [sheetState]);
+
   // Show loading state
   if (isLoading) {
     return (
@@ -268,19 +364,21 @@ function RouteMapContent() {
           className="w-full h-full"
         />
 
-        {/* Mobile Routes FAB */}
-        <button
-          onClick={() => setMobileRoutesOpen(true)}
-          className="md:hidden absolute bottom-6 left-4 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-sm transition-all duration-200 z-[1000]"
-        >
-          <Bus className="w-5 h-5" />
-          <span>Routes</span>
-          {selectedRouteIds.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
-              {selectedRouteIds.length}
-            </span>
-          )}
-        </button>
+        {/* Mobile Routes FAB - hidden when sheet is open */}
+        {sheetState === 'closed' && (
+          <button
+            onClick={() => setSheetState('half')}
+            className="md:hidden absolute bottom-6 left-4 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 border border-gray-200 dark:border-gray-700 font-semibold text-sm z-[1000] fab-button animate-pulse-subtle"
+          >
+            <Bus className="w-5 h-5" />
+            <span>Routes</span>
+            {selectedRouteIds.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
+                {selectedRouteIds.length}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Locate Me FAB */}
         <div className="absolute bottom-6 right-4 flex flex-col items-end gap-2 z-[1000]">
@@ -302,14 +400,14 @@ function RouteMapContent() {
             title="Show my location on map"
             className={`
               flex items-center gap-2 px-4 py-3 rounded-full shadow-xl
-              font-semibold text-sm transition-all duration-200
+              font-semibold text-sm fab-button
               focus:outline-none focus:ring-4 focus:ring-blue-300
               ${
                 isLocating
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : locationFound
-                  ? "bg-green-500 text-white hover:bg-green-600 active:scale-95"
-                  : "bg-white text-primary-600 hover:bg-primary-50 active:scale-95 border border-gray-200"
+                  ? "bg-green-500 text-white"
+                  : "bg-white text-primary-600 border border-gray-200"
               }
             `}
           >
@@ -659,19 +757,43 @@ function RouteMapContent() {
       )}
 
       {/* Mobile Routes Bottom Sheet */}
-      {mobileRoutesOpen && (
-        <div className="md:hidden fixed inset-0 z-[2000]">
-          {/* Backdrop */}
+      {/* Mobile Routes Bottom Sheet - Multi-state */}
+      {(sheetState !== 'closed' || isAnimating) && (
+        <div className="md:hidden fixed inset-0 z-[2000] pointer-events-none">
+          {/* Backdrop - only visible in full mode */}
           <div
-            className="absolute inset-0 bg-black/50 transition-opacity"
-            onClick={() => setMobileRoutesOpen(false)}
+            className={`absolute inset-0 bg-black pointer-events-auto transition-opacity duration-200 ${
+              isAnimating ? 'opacity-0' : sheetState === 'full' ? 'opacity-50' : 'opacity-0'
+            }`}
+            style={{
+              opacity: isDragging && sheetState === 'full'
+                ? Math.max(0, 0.5 - Math.max(0, sheetTranslateY) / 400)
+                : undefined
+            }}
+            onClick={() => transitionTo('half')}
           />
 
           {/* Bottom Sheet */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2">
-              <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+          <div
+            ref={sheetRef}
+            className={`absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl flex flex-col pointer-events-auto ${
+              isAnimating ? 'animate-slide-down-smooth' : 'animate-slide-up-smooth'
+            }`}
+            style={{
+              height: `${getSheetHeight(sheetState)}vh`,
+              transform: isDragging ? `translateY(${Math.max(-50, sheetTranslateY)}px)` : undefined,
+              transition: isDragging ? 'none' : 'height 0.25s ease-out, transform 0.25s ease-out',
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Handle - tap to toggle size */}
+            <div
+              className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+              onClick={toggleSheetSize}
+            >
+              <div className="w-10 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
             </div>
 
             {/* Header */}
@@ -687,20 +809,35 @@ function RouteMapContent() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {selectedRouteIds.length > 0
                       ? `${selectedRouteIds.length} selected`
-                      : "Select routes to view on map"}
+                      : sheetState === 'half' ? "Swipe up to expand" : "Swipe down to minimize"}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setMobileRoutesOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
-              >
-                <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Expand/Collapse button */}
+                <button
+                  onClick={toggleSheetSize}
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center transition-transform active:scale-90"
+                  title={sheetState === 'half' ? 'Expand' : 'Minimize'}
+                >
+                  {sheetState === 'half' ? (
+                    <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  )}
+                </button>
+                {/* Close button */}
+                <button
+                  onClick={() => transitionTo('closed')}
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center transition-transform active:scale-90"
+                >
+                  <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                </button>
+              </div>
             </div>
 
             {/* Routes Panel Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overscroll-contain">
               <RoutesSidePanel
                 selectedRouteIds={selectedRouteIds}
                 onSelectionChange={setSelectedRouteIds}
