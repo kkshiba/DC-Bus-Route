@@ -74,13 +74,6 @@ export default function Home() {
 
         <div className="street-grid absolute inset-0 pointer-events-none" />
 
-        {/* Minimal edge fog — light mode */}
-        <div className="absolute inset-0 pointer-events-none z-[3]"
-          style={{ background: "radial-gradient(ellipse at center, transparent 45%, rgba(240,244,255,0.55) 100%)" }} />
-        {/* Minimal edge fog — dark mode */}
-        <div className="absolute inset-0 pointer-events-none z-[3] hidden dark:block"
-          style={{ background: "radial-gradient(ellipse at center, transparent 45%, rgba(5,13,31,0.55) 100%)" }} />
-
         <div className="orb-1 absolute top-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,_rgba(74,158,221,0.15)_0%,_transparent_70%)] dark:bg-[radial-gradient(circle,_rgba(13,59,110,0.30)_0%,_transparent_70%)] blur-3xl pointer-events-none z-[2]" />
         <div className="orb-2 absolute bottom-[-15%] right-[-8%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,_rgba(12,62,103,0.10)_0%,_transparent_70%)] dark:bg-[radial-gradient(circle,_rgba(74,158,221,0.07)_0%,_transparent_70%)] blur-3xl pointer-events-none z-[2]" />
         <div className="orb-3 absolute top-[35%] right-[10%] w-[300px] h-[300px] rounded-full bg-[radial-gradient(circle,_rgba(147,197,253,0.15)_0%,_transparent_70%)] dark:bg-[radial-gradient(circle,_rgba(30,58,95,0.22)_0%,_transparent_70%)] blur-2xl pointer-events-none z-[2]" />
