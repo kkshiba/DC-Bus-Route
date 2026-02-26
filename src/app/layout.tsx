@@ -65,6 +65,14 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         <link rel="icon" href="/favicon.png" type="image/png" />
+        {/* Preconnect for faster font loading */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Load all custom fonts globally: Syne (header/footer logo), Barlow (hero titles), DM Sans (hero body) */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Barlow:wght@700;800;900&family=DM+Sans:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className={`${inter.className} antialiased`}>
         <ThemeProvider>
