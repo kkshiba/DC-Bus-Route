@@ -62,3 +62,18 @@ export interface RouteStopResult {
   stop_order: number;
   route_ids: string[];
 }
+
+// Trip feedback table
+export interface DbTripFeedback {
+  id: string;
+  star_rating: number;
+  comment: string | null;
+  session_id: string;
+  route_ids: string[];
+  origin_stop_name: string;
+  destination_stop_name: string;
+  trip_duration_minutes: number;
+  number_of_rides: number;
+  submitted_at: string;
+  user_agent: string | null;
+}

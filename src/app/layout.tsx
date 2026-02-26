@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { FooterWrapper } from "@/components/FooterWrapper";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { BusStatusBanner } from "@/components/BusStatusBanner";
+import { FeedbackModal } from "@/components/feedback/FeedbackModal";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -82,6 +83,7 @@ export default function RootLayout({
             </main>
             <FooterWrapper />
           </div>
+          <FeedbackModal />
         </ThemeProvider>
       </body>
     </html>

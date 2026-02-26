@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bus, Navigation, ChevronLeft, ChevronRight } from "lucide-react";
 import { RoutesSidePanel } from "./RoutesSidePanel";
 import { TripPlanner, RouteOptions, NavigationSession } from "./navigation";
@@ -17,10 +18,19 @@ export function TabbedSidePanel({
   selectedRouteIds,
   onSelectionChange,
 }: TabbedSidePanelProps) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("routes");
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { planningStatus, session } = useNavigationStore();
+
+  // Handle tab parameter from URL (e.g., ?tab=navigate)
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "navigate") {
+      setActiveTab("navigate");
+    }
+  }, [searchParams]);
 
   // Determine what to show in the Navigate tab
   const renderNavigateContent = () => {
