@@ -216,23 +216,53 @@ function RouteMapContent() {
     setLocateError(null);
     setLocationFound(false);
 
+    const onSuccess = (position: GeolocationPosition) => {
+      const newLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+      setUserLocation(newLocation);
+      setFlyToLocation(newLocation);
+      setIsLocating(false);
+      setLocationFound(true);
+    };
+
+    const onError = (error: GeolocationPositionError) => {
+      console.error("Geolocation error:", error.code, error.message);
+      setIsLocating(false);
+
+      // Provide specific error messages based on error code
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setLocateError("Location permission denied. Please allow location access in your browser settings.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setLocateError("Location unavailable. Please check if GPS/Location is enabled on your device.");
+          break;
+        case error.TIMEOUT:
+          setLocateError("Location request timed out. Please try again.");
+          break;
+        default:
+          setLocateError("Unable to get your location. Please try again.");
+      }
+    };
+
+    // Try with high accuracy first, longer timeout for mobile
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const newLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserLocation(newLocation);
-        setFlyToLocation(newLocation);
-        setIsLocating(false);
-        setLocationFound(true);
-      },
+      onSuccess,
       (error) => {
-        console.error("Error getting location:", error);
-        setLocateError("Unable to get your location. Please enable location services.");
-        setIsLocating(false);
+        // If high accuracy fails, try with low accuracy as fallback
+        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+          navigator.geolocation.getCurrentPosition(
+            onSuccess,
+            onError,
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+          );
+        } else {
+          onError(error);
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
   };
 
