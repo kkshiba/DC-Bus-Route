@@ -7,7 +7,7 @@ A web application for navigating public bus transportation in Davao City, Philip
 
 ## Demo
 
-[Live Demo](https://dc-bus-route-n7kyrhir0-antonios-projects-6c6dc998.vercel.app/)
+[Live Demo](https://dc-bus-route.vercel.app)
 
 ## Features
 
