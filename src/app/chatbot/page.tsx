@@ -148,6 +148,16 @@ export default function Chatbot() {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-4 space-y-6">
+          {messages.length === 1 && !isTyping && (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center">
+                <Bot className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+              </div>
+              <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs">
+                Ask me anything about DC Bus routes, stops, or directions in Davao City.
+              </p>
+            </div>
+          )}
           {messages.map((message) => (
             <div
               key={message.id}
@@ -289,7 +299,7 @@ export default function Chatbot() {
                 <Send className="w-5 h-5" />
               </Button>
             </div>
-
+            
             {/* Mobile Location Indicator */}
             {userLocation && (
               <p className="sm:hidden text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1">
