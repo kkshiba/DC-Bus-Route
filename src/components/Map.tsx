@@ -17,6 +17,8 @@ interface MapProps {
   highlightedRouteId?: string | null; // Single route to highlight (from ?route= param)
   highlightedRouteIds?: string[]; // Multiple routes to highlight (for multi-select)
   userLocation?: { lat: number; lng: number } | null;
+  flyToLocation?: { lat: number; lng: number } | null; // Trigger fly animation to this location
+  onFlyComplete?: () => void; // Called after fly animation completes
   onStopClick?: (stop: GeoJSONStop) => void;
   className?: string;
   showAllRoutes?: boolean; // If false, only show selected/highlighted routes
@@ -30,6 +32,8 @@ function MapInner({
   highlightedRouteId,
   highlightedRouteIds = [],
   userLocation,
+  flyToLocation,
+  onFlyComplete,
   onStopClick,
   className,
   showAllRoutes = false,
@@ -69,7 +73,33 @@ function MapInner({
     );
   }
 
-  const { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker } = ReactLeaflet;
+  const { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } = ReactLeaflet;
+
+  // Component to handle flying to a location
+  function MapController({
+    flyTo,
+    onComplete,
+  }: {
+    flyTo?: { lat: number; lng: number } | null;
+    onComplete?: () => void;
+  }) {
+    const map = useMap();
+
+    useEffect(() => {
+      if (flyTo) {
+        map.flyTo([flyTo.lat, flyTo.lng], 16, {
+          duration: 1
+        });
+        // Reset flyToLocation after animation completes
+        const timer = setTimeout(() => {
+          onComplete?.();
+        }, 1100);
+        return () => clearTimeout(timer);
+      }
+    }, [flyTo, map, onComplete]);
+
+    return null;
+  }
 
   // Get highlighted route IDs from selected route, single highlighted route, or multi-select
   const highlightedRouteIdSet = new Set<string>();
@@ -145,6 +175,7 @@ function MapInner({
         style={{ width: "100%", height: "100%" }}
         scrollWheelZoom={true}
       >
+        <MapController flyTo={flyToLocation} onComplete={onFlyComplete} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

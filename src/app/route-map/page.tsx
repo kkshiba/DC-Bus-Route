@@ -52,6 +52,7 @@ function RouteMapContent() {
   const [isLocating, setIsLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
   const [locationFound, setLocationFound] = useState(false);
+  const [flyToLocation, setFlyToLocation] = useState<Coordinates | null>(null);
 
   const [routes, setRoutes] = useState<GeoJSONRoute[]>([]);
   const [stops, setStops] = useState<GeoJSONStop[]>([]);
@@ -200,6 +201,12 @@ function RouteMapContent() {
   }, [locationFound]);
 
   const handleLocateMe = () => {
+    // If location already found, fly to it
+    if (userLocation) {
+      setFlyToLocation({ ...userLocation });
+      return;
+    }
+
     if (!navigator.geolocation) {
       setLocateError("Geolocation is not supported by your browser.");
       return;
@@ -211,10 +218,12 @@ function RouteMapContent() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        const newLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        });
+        };
+        setUserLocation(newLocation);
+        setFlyToLocation(newLocation);
         setIsLocating(false);
         setLocationFound(true);
       },
@@ -345,28 +354,30 @@ function RouteMapContent() {
                 : selectedRouteIds
             }
             userLocation={userLocation}
+            flyToLocation={flyToLocation}
+            onFlyComplete={() => setFlyToLocation(null)}
             className="w-full h-full"
           />
 
-          {/* Mobile FAB Buttons */}
-          <div className="md:hidden absolute bottom-6 left-4 flex gap-2 z-[1000]">
+          {/* Mobile FAB Buttons - Horizontal on left */}
+          <div className="md:hidden absolute bottom-6 left-4 flex flex-row items-center gap-2 z-[1000]">
             <button
               onClick={() => setMobileRoutesOpen(true)}
-              className="flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-sm transition-all duration-200"
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-xs transition-all duration-200"
             >
-              <Bus className="w-5 h-5" />
+              <Bus className="w-4 h-4" />
               <span>Routes</span>
               {selectedRouteIds.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
+                <span className="px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-[10px] font-bold">
                   {selectedRouteIds.length}
                 </span>
               )}
             </button>
             <button
               onClick={() => setMobileNavigateOpen(true)}
-              className="flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600 active:scale-95 font-semibold text-sm transition-all duration-200"
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-xl bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600 active:scale-95 font-semibold text-xs transition-all duration-200"
             >
-              <Navigation className="w-5 h-5" />
+              <Navigation className="w-4 h-4" />
               <span>Navigate</span>
             </button>
           </div>
