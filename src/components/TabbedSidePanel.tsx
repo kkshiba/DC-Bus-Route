@@ -20,12 +20,8 @@ export function TabbedSidePanel({
   onSelectionChange,
   defaultTab = "routes",
 }: TabbedSidePanelProps) {
-<<<<<<< HEAD
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabType>("routes");
-=======
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
->>>>>>> 61da6fecfc59f33198ccc5c37d405170e3ae7510
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { planningStatus, session } = useNavigationStore();
