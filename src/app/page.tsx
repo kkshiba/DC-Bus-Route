@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, MapPin } from "lucide-react";
+import { ChevronRight, MapPin, Navigation } from "lucide-react";
 
 export default function Home() {
   return (
@@ -104,16 +104,23 @@ export default function Home() {
             Find your route. Know your stops. Never get lost again.
           </p>
 
-          <div className="fade-up-4 mt-12 flex items-center justify-center gap-4 flex-wrap">
-            <Link href="/route-map" className="btn-primary inline-flex items-center gap-2.5 px-9 py-4 rounded-2xl bg-[#0C3E67] dark:bg-white text-white dark:text-[#0C3E67] text-[13px] font-semibold tracking-wide shadow-[0_8px_28px_rgba(12,62,103,0.32)]">
-              <MapPin className="w-4 h-4" />
-              Route Map
-            </Link>
-            <Link href="/chatbot" className="btn-secondary inline-flex items-center gap-2 px-9 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
-              AI Chatbot
-              <ChevronRight className="chevron w-4 h-4 opacity-60" />
-            </Link>
-          </div>
+          <div className="fade-up-4 mt-12 flex flex-col items-center gap-3">
+  <div className="flex items-center justify-center gap-4 flex-wrap">
+    <Link href="/route-map" className="btn-primary inline-flex items-center gap-2.5 px-9 py-4 rounded-2xl bg-[#0C3E67] dark:bg-white text-white dark:text-[#0C3E67] text-[13px] font-semibold tracking-wide shadow-[0_8px_28px_rgba(12,62,103,0.32)]">
+      <MapPin className="w-4 h-4" />
+      Route Map
+    </Link>
+    <Link href="/chatbot" className="btn-secondary inline-flex items-center gap-2 px-9 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
+      AI Chatbot
+      <ChevronRight className="chevron w-4 h-4 opacity-60" />
+    </Link>
+  </div>
+  <Link href="/route-map?tab=navigate" className="btn-secondary inline-flex items-center gap-2 px-9 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
+    <Navigation className="w-4 h-4 opacity-70" />
+    Navigate
+    <ChevronRight className="chevron w-4 h-4 opacity-60" />
+  </Link>
+</div>
 
         </div>
       </div>

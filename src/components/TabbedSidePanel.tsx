@@ -9,6 +9,7 @@ import { useNavigationStore } from "@/stores/navigation-store";
 interface TabbedSidePanelProps {
   selectedRouteIds: string[];
   onSelectionChange: (routeIds: string[]) => void;
+  defaultTab?: TabType;
 }
 
 type TabType = "routes" | "navigate";
@@ -16,8 +17,9 @@ type TabType = "routes" | "navigate";
 export function TabbedSidePanel({
   selectedRouteIds,
   onSelectionChange,
+  defaultTab = "routes",
 }: TabbedSidePanelProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("routes");
+  const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { planningStatus, session } = useNavigationStore();

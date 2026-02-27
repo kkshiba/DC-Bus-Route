@@ -40,6 +40,7 @@ function RouteMapContent() {
   const startParam = searchParams.get("start") || "";
   const destinationParam = searchParams.get("destination") || "";
   const routeParam = searchParams.get("route") || "";
+  const tabParam = searchParams.get("tab") as "routes" | "navigate" | null;
 
   const { session, planningStatus } = useNavigationStore();
 
@@ -293,6 +294,7 @@ function RouteMapContent() {
           <TabbedSidePanel
             selectedRouteIds={selectedRouteIds}
             onSelectionChange={setSelectedRouteIds}
+            defaultTab={tabParam === "navigate" ? "navigate" : "routes"}
           />
         </div>
 
