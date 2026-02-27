@@ -92,11 +92,11 @@ export default function Home() {
             </span>
           </div>
 
-          <h1 className="hero-title fade-up-2 text-[clamp(2.8rem,7vw,5.5rem)] leading-[1.0] tracking-[-0.02em] whitespace-nowrap text-[#0a1628] dark:text-white">
+          <h1 className="hero-title fade-up-2 text-[clamp(2.8rem,7vw,5.5rem)] leading-[1.0] tracking-[-0.02em] md:whitespace-nowrap text-[#0a1628] dark:text-white">
             Navigate Davao City
           </h1>
 
-          <h2 className="hero-title fade-up-3 text-[clamp(2.8rem,7vw,5.5rem)] leading-[1.0] tracking-[-0.02em] mt-5 whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-[#0C3E67] via-[#1a6bac] to-[#4a9edd] dark:from-[#4a9edd] dark:via-[#7ec8f0] dark:to-[#b8dff8]">
+          <h2 className="hero-title fade-up-3 text-[clamp(2.8rem,7vw,5.5rem)] leading-[1.0] tracking-[-0.02em] mt-5 md:whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-[#0C3E67] via-[#1a6bac] to-[#4a9edd] dark:from-[#4a9edd] dark:via-[#7ec8f0] dark:to-[#b8dff8]">
             With Ease.
           </h2>
 

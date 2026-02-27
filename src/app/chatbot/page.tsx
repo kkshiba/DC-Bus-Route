@@ -137,7 +137,7 @@ export default function Chatbot() {
             </p>
           </div>
           {userLocation && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">
               <MapPin className="w-3.5 h-3.5" />
               Location active
             </div>

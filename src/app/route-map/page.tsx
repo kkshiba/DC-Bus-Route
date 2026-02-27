@@ -14,12 +14,16 @@ import {
   Route,
   Circle,
   X,
+  Navigation,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Map from "@/components/Map";
 import { TabbedSidePanel } from "@/components/TabbedSidePanel";
 import { RoutesSidePanel } from "@/components/RoutesSidePanel";
+import { TripPlanner, RouteOptions, NavigationSession } from "@/components/navigation";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { loadRouteData, getRawGeoJSON, getOrderedStopsForRoute } from "@/lib/data-loader";
 import { findRoute, getRouteDirections } from "@/lib/route-algorithm";
@@ -59,6 +63,8 @@ function RouteMapContent() {
   const [routeStops, setRouteStops] = useState<GeoJSONStop[]>([]);
   const [selectedRouteIds, setSelectedRouteIds] = useState<string[]>([]);
   const [mobileRoutesOpen, setMobileRoutesOpen] = useState(false);
+  const [mobileNavigateOpen, setMobileNavigateOpen] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
 
   // Animation states
   const [sidebarReady, setSidebarReady] = useState(false);
@@ -111,6 +117,21 @@ function RouteMapContent() {
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [isLoading]);
+
+  // Auto-open mobile sheets based on tab parameter
+  useEffect(() => {
+    if (!isLoading && typeof window !== 'undefined' && window.innerWidth < 768) {
+      // Small delay to let the page render first
+      const t = setTimeout(() => {
+        if (tabParam === "navigate") {
+          setMobileNavigateOpen(true);
+        } else {
+          setMobileRoutesOpen(true);
+        }
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading, tabParam]);
 
   // Animate details panel when it appears
   useEffect(() => {
@@ -271,6 +292,14 @@ function RouteMapContent() {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes sheet-slide-up {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes sheet-backdrop-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
         .sidebar-enter {
           animation: slide-in-left 0.45s cubic-bezier(0.22,1,0.36,1) both;
         }
@@ -283,6 +312,12 @@ function RouteMapContent() {
         .stagger-item {
           opacity: 0;
           animation: slide-up-fade 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .sheet-enter {
+          animation: sheet-slide-up 0.3s cubic-bezier(0.32,0.72,0,1) both;
+        }
+        .sheet-backdrop-enter {
+          animation: sheet-backdrop-in 0.2s ease-out both;
         }
       `}</style>
 
@@ -313,19 +348,28 @@ function RouteMapContent() {
             className="w-full h-full"
           />
 
-          {/* Mobile Routes FAB */}
-          <button
-            onClick={() => setMobileRoutesOpen(true)}
-            className="md:hidden absolute bottom-6 left-4 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-sm transition-all duration-200 z-[1000]"
-          >
-            <Bus className="w-5 h-5" />
-            <span>Routes</span>
-            {selectedRouteIds.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
-                {selectedRouteIds.length}
-              </span>
-            )}
-          </button>
+          {/* Mobile FAB Buttons */}
+          <div className="md:hidden absolute bottom-6 left-4 flex gap-2 z-[1000]">
+            <button
+              onClick={() => setMobileRoutesOpen(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-sm transition-all duration-200"
+            >
+              <Bus className="w-5 h-5" />
+              <span>Routes</span>
+              {selectedRouteIds.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
+                  {selectedRouteIds.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setMobileNavigateOpen(true)}
+              className="flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600 active:scale-95 font-semibold text-sm transition-all duration-200"
+            >
+              <Navigation className="w-5 h-5" />
+              <span>Navigate</span>
+            </button>
+          </div>
 
           {/* Locate Me FAB */}
           <div className="absolute bottom-6 right-4 flex flex-col items-end gap-2 z-[1000]">
@@ -344,7 +388,7 @@ function RouteMapContent() {
               disabled={isLocating}
               title="Show my location on map"
               className={`
-                flex items-center gap-2 px-4 py-3 rounded-full shadow-xl
+                flex items-center justify-center gap-2 p-3 md:px-4 md:py-3 rounded-full shadow-xl
                 font-semibold text-sm transition-all duration-200
                 focus:outline-none focus:ring-4 focus:ring-blue-300
                 ${
@@ -357,12 +401,13 @@ function RouteMapContent() {
               `}
             >
               {isLocating ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /><span>Locating...</span></>
-              ) : locationFound ? (
-                <><LocateFixed className="w-5 h-5" /><span>Located</span></>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <><LocateFixed className="w-5 h-5" /><span>My Location</span></>
+                <LocateFixed className="w-5 h-5" />
               )}
+              <span className="hidden md:inline">
+                {isLocating ? "Locating..." : locationFound ? "Located" : "My Location"}
+              </span>
             </button>
           </div>
         </div>
@@ -611,12 +656,22 @@ function RouteMapContent() {
 
         {/* Mobile Routes Bottom Sheet */}
         {mobileRoutesOpen && (
-          <div className="md:hidden fixed inset-0 z-[2000]">
-            <div className="absolute inset-0 bg-black/50 transition-opacity" onClick={() => setMobileRoutesOpen(false)} />
-            <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
-              <div className="flex justify-center pt-3 pb-2">
+          <div className={`md:hidden fixed inset-0 z-[2000] ${sheetExpanded ? '' : 'pointer-events-none'}`}>
+            <div
+              className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${sheetExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+              onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
+            />
+            <div
+              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-[85vh]' : 'h-[45vh]'}`}
+            >
+              {/* Drag Handle */}
+              <div
+                className="flex justify-center pt-3 pb-2 cursor-pointer"
+                onClick={() => setSheetExpanded(!sheetExpanded)}
+              >
                 <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               </div>
+              {/* Header */}
               <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
@@ -625,23 +680,99 @@ function RouteMapContent() {
                   <div>
                     <h2 className="font-semibold text-gray-900 dark:text-gray-100">Bus Routes</h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {selectedRouteIds.length > 0 ? `${selectedRouteIds.length} selected` : "Select routes to view on map"}
+                      {selectedRouteIds.length > 0 ? `${selectedRouteIds.length} selected` : "Select routes to view"}
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setMobileRoutesOpen(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
-                >
-                  <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSheetExpanded(!sheetExpanded)}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    {sheetExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
               </div>
+              {/* Content */}
               <div className="flex-1 overflow-y-auto">
                 <RoutesSidePanel
                   selectedRouteIds={selectedRouteIds}
                   onSelectionChange={setSelectedRouteIds}
                   compact
                 />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Navigate Bottom Sheet */}
+        {mobileNavigateOpen && (
+          <div className={`md:hidden fixed inset-0 z-[2000] ${sheetExpanded ? '' : 'pointer-events-none'}`}>
+            <div
+              className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${sheetExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+              onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
+            />
+            <div
+              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-[85vh]' : 'h-[45vh]'}`}
+            >
+              {/* Drag Handle */}
+              <div
+                className="flex justify-center pt-3 pb-2 cursor-pointer"
+                onClick={() => setSheetExpanded(!sheetExpanded)}
+              >
+                <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+              </div>
+              {/* Header */}
+              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Navigation className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900 dark:text-gray-100">Navigate</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Plan your trip
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSheetExpanded(!sheetExpanded)}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    {sheetExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+              </div>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+                {planningStatus === "selecting" ? (
+                  <RouteOptions />
+                ) : planningStatus === "navigating" && session ? (
+                  <NavigationSession />
+                ) : (
+                  <TripPlanner />
+                )}
               </div>
             </div>
           </div>
