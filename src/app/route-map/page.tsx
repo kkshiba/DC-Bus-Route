@@ -693,15 +693,17 @@ function RouteMapContent() {
             backdrop and sheet never overlap the sticky site header.
         ──────────────────────────────────────────────────────────────────────── */}
         {mobileRoutesOpen && (
-          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000]">
-            {/* Backdrop — only covers the area below the header */}
+          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000] pointer-events-none">
+            {/* Backdrop — only shown when expanded so map is interactive when minimized */}
+            {sheetExpanded && (
+              <div
+                className="sheet-backdrop-enter absolute inset-0 bg-black/40 pointer-events-auto"
+                onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
+              />
+            )}
+            {/* Sheet — always intercepts its own touches */}
             <div
-              className="sheet-backdrop-enter absolute inset-0 bg-black/40"
-              onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
-            />
-            {/* Sheet */}
-            <div
-              className={`sheet-enter absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
+              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
             >
               {/* Drag Handle */}
               <div
@@ -758,15 +760,17 @@ function RouteMapContent() {
             Same fix: `top-16` keeps it below the sticky header.
         ──────────────────────────────────────────────────────────────────────── */}
         {mobileNavigateOpen && (
-          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000]">
-            {/* Backdrop */}
+          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000] pointer-events-none">
+            {/* Backdrop — only shown when expanded so map is interactive when minimized */}
+            {sheetExpanded && (
+              <div
+                className="sheet-backdrop-enter absolute inset-0 bg-black/40 pointer-events-auto"
+                onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
+              />
+            )}
+            {/* Sheet — always intercepts its own touches */}
             <div
-              className="sheet-backdrop-enter absolute inset-0 bg-black/40"
-              onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
-            />
-            {/* Sheet */}
-            <div
-              className={`sheet-enter absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
+              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
             >
               {/* Drag Handle */}
               <div
