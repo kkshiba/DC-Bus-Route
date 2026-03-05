@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,6 +14,8 @@ import {
   Route,
   Circle,
   X,
+  Navigation,
+  ChevronUp,
   ChevronDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import Map from "@/components/Map";
 import { TabbedSidePanel } from "@/components/TabbedSidePanel";
 import { RoutesSidePanel } from "@/components/RoutesSidePanel";
+import { TripPlanner, RouteOptions, NavigationSession } from "@/components/navigation";
 import { useNavigationStore } from "@/stores/navigation-store";
 import { loadRouteData, getRawGeoJSON, getOrderedStopsForRoute } from "@/lib/data-loader";
 import { findRoute, getRouteDirections } from "@/lib/route-algorithm";
@@ -40,6 +43,7 @@ function RouteMapContent() {
   const startParam = searchParams.get("start") || "";
   const destinationParam = searchParams.get("destination") || "";
   const routeParam = searchParams.get("route") || "";
+  const tabParam = searchParams.get("tab") as "routes" | "navigate" | null;
 
   const { session, planningStatus } = useNavigationStore();
 
@@ -48,6 +52,7 @@ function RouteMapContent() {
   const [isLocating, setIsLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
   const [locationFound, setLocationFound] = useState(false);
+  const [flyToLocation, setFlyToLocation] = useState<Coordinates | null>(null);
 
   const [routes, setRoutes] = useState<GeoJSONRoute[]>([]);
   const [stops, setStops] = useState<GeoJSONStop[]>([]);
@@ -59,6 +64,8 @@ function RouteMapContent() {
   const [routeStops, setRouteStops] = useState<GeoJSONStop[]>([]);
   const [selectedRouteIds, setSelectedRouteIds] = useState<string[]>([]);
   const [mobileRoutesOpen, setMobileRoutesOpen] = useState(false);
+  const [mobileNavigateOpen, setMobileNavigateOpen] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
 
   // Animation states
   const [sidebarReady, setSidebarReady] = useState(false);
@@ -104,13 +111,25 @@ function RouteMapContent() {
   // Stagger entrance animations after data loads
   useEffect(() => {
     if (!isLoading) {
-      // Sidebar first
       const t1 = setTimeout(() => setSidebarReady(true), 60);
-      // Map slightly after
       const t2 = setTimeout(() => setMapReady(true), 180);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, [isLoading]);
+
+  // Auto-open mobile sheets based on tab parameter
+  useEffect(() => {
+    if (!isLoading && typeof window !== 'undefined' && window.innerWidth < 768) {
+      const t = setTimeout(() => {
+        if (tabParam === "navigate") {
+          setMobileNavigateOpen(true);
+        } else {
+          setMobileRoutesOpen(true);
+        }
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading, tabParam]);
 
   // Animate details panel when it appears
   useEffect(() => {
@@ -179,6 +198,11 @@ function RouteMapContent() {
   }, [locationFound]);
 
   const handleLocateMe = () => {
+    if (userLocation) {
+      setFlyToLocation({ ...userLocation });
+      return;
+    }
+
     if (!navigator.geolocation) {
       setLocateError("Geolocation is not supported by your browser.");
       return;
@@ -188,21 +212,50 @@ function RouteMapContent() {
     setLocateError(null);
     setLocationFound(false);
 
+    const onSuccess = (position: GeolocationPosition) => {
+      const newLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+      setUserLocation(newLocation);
+      setFlyToLocation(newLocation);
+      setIsLocating(false);
+      setLocationFound(true);
+    };
+
+    const onError = (error: GeolocationPositionError) => {
+      console.error("Geolocation error:", error.code, error.message);
+      setIsLocating(false);
+
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          setLocateError("Location permission denied. Please allow location access in your browser settings.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          setLocateError("Location unavailable. Please check if GPS/Location is enabled on your device.");
+          break;
+        case error.TIMEOUT:
+          setLocateError("Location request timed out. Please try again.");
+          break;
+        default:
+          setLocateError("Unable to get your location. Please try again.");
+      }
+    };
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setIsLocating(false);
-        setLocationFound(true);
-      },
+      onSuccess,
       (error) => {
-        console.error("Error getting location:", error);
-        setLocateError("Unable to get your location. Please enable location services.");
-        setIsLocating(false);
+        if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+          navigator.geolocation.getCurrentPosition(
+            onSuccess,
+            onError,
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+          );
+        } else {
+          onError(error);
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
   };
 
@@ -226,7 +279,7 @@ function RouteMapContent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
           <p className="mt-4 text-gray-500 dark:text-gray-400">Loading route data...</p>
@@ -237,7 +290,7 @@ function RouteMapContent() {
 
   if (loadError) {
     return (
-      <div className="flex items-center justify-center h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
         <div className="text-center">
           <p className="text-red-500">{loadError}</p>
           <Button onClick={() => window.location.reload()} className="mt-4">
@@ -271,6 +324,14 @@ function RouteMapContent() {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes sheet-slide-up {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
+        @keyframes sheet-backdrop-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
         .sidebar-enter {
           animation: slide-in-left 0.45s cubic-bezier(0.22,1,0.36,1) both;
         }
@@ -284,15 +345,22 @@ function RouteMapContent() {
           opacity: 0;
           animation: slide-up-fade 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
         }
+        .sheet-enter {
+          animation: sheet-slide-up 0.3s cubic-bezier(0.32,0.72,0,1) both;
+        }
+        .sheet-backdrop-enter {
+          animation: sheet-backdrop-in 0.2s ease-out both;
+        }
       `}</style>
 
-      <div className="flex h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] overflow-hidden">
+      <div className="flex h-[calc(100dvh-4rem)] overflow-hidden">
 
         {/* Sidebar — slides in from left */}
         <div className={`hidden md:block ${sidebarReady ? "sidebar-enter" : "opacity-0"}`}>
           <TabbedSidePanel
             selectedRouteIds={selectedRouteIds}
             onSelectionChange={setSelectedRouteIds}
+            defaultTab={tabParam === "navigate" ? "navigate" : "routes"}
           />
         </div>
 
@@ -309,25 +377,36 @@ function RouteMapContent() {
                 : selectedRouteIds
             }
             userLocation={userLocation}
+            flyToLocation={flyToLocation}
+            onFlyComplete={() => setFlyToLocation(null)}
             className="w-full h-full"
           />
 
-          {/* Mobile Routes FAB */}
-          <button
-            onClick={() => setMobileRoutesOpen(true)}
-            className="md:hidden absolute bottom-24 left-4 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-sm transition-all duration-200 z-[1000]"
-          >
-            <Bus className="w-5 h-5" />
-            <span>Routes</span>
-            {selectedRouteIds.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-xs font-bold">
-                {selectedRouteIds.length}
-              </span>
-            )}
-          </button>
+          {/* Mobile FAB Buttons */}
+          <div className="md:hidden absolute bottom-6 left-4 flex flex-row items-center gap-2 z-[1000]">
+            <button
+              onClick={() => { setMobileRoutesOpen(true); setSheetExpanded(false); }}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-xs transition-all duration-200"
+            >
+              <Bus className="w-4 h-4" />
+              <span>Routes</span>
+              {selectedRouteIds.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-primary-600 text-white text-[10px] font-bold">
+                  {selectedRouteIds.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => { setMobileNavigateOpen(true); setSheetExpanded(false); }}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-xl bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600 active:scale-95 font-semibold text-xs transition-all duration-200"
+            >
+              <Navigation className="w-4 h-4" />
+              <span>Navigate</span>
+            </button>
+          </div>
 
           {/* Locate Me FAB */}
-          <div className="absolute bottom-24 md:bottom-6 right-4 flex flex-col items-end gap-2 z-[1000]">
+          <div className="absolute bottom-6 right-4 flex flex-col items-end gap-2 z-[1000]">
             {locateError && (
               <div className="bg-red-600 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-[200px] text-right">
                 {locateError}
@@ -343,7 +422,7 @@ function RouteMapContent() {
               disabled={isLocating}
               title="Show my location on map"
               className={`
-                flex items-center gap-2 px-4 py-3 rounded-full shadow-xl
+                flex items-center justify-center gap-2 p-3 md:px-4 md:py-3 rounded-full shadow-xl
                 font-semibold text-sm transition-all duration-200
                 focus:outline-none focus:ring-4 focus:ring-blue-300
                 ${
@@ -356,17 +435,18 @@ function RouteMapContent() {
               `}
             >
               {isLocating ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /><span>Locating...</span></>
-              ) : locationFound ? (
-                <><LocateFixed className="w-5 h-5" /><span>Located</span></>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <><LocateFixed className="w-5 h-5" /><span>My Location</span></>
+                <LocateFixed className="w-5 h-5" />
               )}
+              <span className="hidden md:inline">
+                {isLocating ? "Locating..." : locationFound ? "Located" : "My Location"}
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Route Details Panel — slides in from right */}
+        {/* Route Details Panel — desktop only */}
         {hasRouteToDisplay && (
           <div className={`hidden md:block w-80 h-full overflow-y-auto bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 ${detailsReady ? "details-enter" : "opacity-0"}`}>
             <div className="p-4 space-y-4">
@@ -608,15 +688,30 @@ function RouteMapContent() {
           </div>
         )}
 
-        {/* Mobile Routes Bottom Sheet */}
+        {/* ─── Mobile Routes Bottom Sheet ─────────────────────────────────────
+            KEY FIX: Use `top-16` (= header height) instead of `inset-0` so the
+            backdrop and sheet never overlap the sticky site header.
+        ──────────────────────────────────────────────────────────────────────── */}
         {mobileRoutesOpen && (
-          <div className="md:hidden fixed inset-0 top-16 z-[2000]">
-            <div className="absolute inset-0 bg-black/50 transition-opacity" onClick={() => setMobileRoutesOpen(false)} />
-            <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl max-h-[calc(100dvh-4rem)] flex flex-col animate-in slide-in-from-bottom duration-300">
-              <div className="flex justify-center pt-3 pb-2">
+          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000]">
+            {/* Backdrop — only covers the area below the header */}
+            <div
+              className="sheet-backdrop-enter absolute inset-0 bg-black/40"
+              onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
+            />
+            {/* Sheet */}
+            <div
+              className={`sheet-enter absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
+            >
+              {/* Drag Handle */}
+              <div
+                className="flex justify-center pt-3 pb-2 cursor-pointer flex-shrink-0"
+                onClick={() => setSheetExpanded(!sheetExpanded)}
+              >
                 <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               </div>
-              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              {/* Sheet Header */}
+              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                     <Bus className="w-5 h-5 text-primary-600 dark:text-primary-400" />
@@ -624,23 +719,101 @@ function RouteMapContent() {
                   <div>
                     <h2 className="font-semibold text-gray-900 dark:text-gray-100">Bus Routes</h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {selectedRouteIds.length > 0 ? `${selectedRouteIds.length} selected` : "Select routes to view on map"}
+                      {selectedRouteIds.length > 0 ? `${selectedRouteIds.length} selected` : "Select routes to view"}
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setMobileRoutesOpen(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
-                >
-                  <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSheetExpanded(!sheetExpanded)}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    {sheetExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto min-h-0">
                 <RoutesSidePanel
                   selectedRouteIds={selectedRouteIds}
                   onSelectionChange={setSelectedRouteIds}
                   compact
                 />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Mobile Navigate Bottom Sheet ───────────────────────────────────
+            Same fix: `top-16` keeps it below the sticky header.
+        ──────────────────────────────────────────────────────────────────────── */}
+        {mobileNavigateOpen && (
+          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000]">
+            {/* Backdrop */}
+            <div
+              className="sheet-backdrop-enter absolute inset-0 bg-black/40"
+              onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
+            />
+            {/* Sheet */}
+            <div
+              className={`sheet-enter absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
+            >
+              {/* Drag Handle */}
+              <div
+                className="flex justify-center pt-3 pb-2 cursor-pointer flex-shrink-0"
+                onClick={() => setSheetExpanded(!sheetExpanded)}
+              >
+                <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+              </div>
+              {/* Sheet Header */}
+              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Navigation className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900 dark:text-gray-100">Navigate</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Plan your trip</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSheetExpanded(!sheetExpanded)}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    {sheetExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    ) : (
+                      <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
+                    className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+              </div>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {planningStatus === "selecting" ? (
+                  <RouteOptions />
+                ) : planningStatus === "navigating" && session ? (
+                  <NavigationSession />
+                ) : (
+                  <TripPlanner />
+                )}
               </div>
             </div>
           </div>
@@ -654,7 +827,7 @@ export default function RouteMap() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-center h-[calc(100dvh-4rem)] bg-white dark:bg-gray-900">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
             <p className="mt-4 text-gray-500 dark:text-gray-400">Loading route map...</p>
