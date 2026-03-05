@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, MapPin, Navigation } from "lucide-react";
+import { Navigation, MapPin, ChevronRight } from "lucide-react";
 
 export default function Home() {
   return (
@@ -82,7 +82,7 @@ export default function Home() {
 
         <div className="relative text-center w-full max-w-5xl flex flex-col items-center" style={{ zIndex: 10 }}>
 
-          <div className="badge-float fade-up-1 inline-flex items-center gap-2 mb-8 md:mb-12 px-4 py-2 rounded-full bg-white/80 dark:bg-white/[0.07] border border-[#0C3E67]/15 dark:border-white/10 backdrop-blur-md shadow-sm">
+          <div className="badge-float fade-up-1 inline-flex items-center gap-2 mb-12 px-4 py-2 rounded-full bg-white/80 dark:bg-white/[0.07] border border-[#0C3E67]/15 dark:border-white/10 backdrop-blur-md shadow-sm">
             <span className="relative flex h-2 w-2">
               <span className="pin-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -92,32 +92,30 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Mobile: smaller clamped size, no whitespace-nowrap so it wraps nicely */}
-          <h1 className="hero-title fade-up-2 text-[clamp(2.2rem,9vw,5.5rem)] leading-[1.0] tracking-[-0.02em] md:whitespace-nowrap text-[#0a1628] dark:text-white">
+          <h1 className="hero-title fade-up-2 text-[clamp(2.8rem,7vw,5.5rem)] leading-[1.0] tracking-[-0.02em] md:whitespace-nowrap text-[#0a1628] dark:text-white">
             Navigate Davao City
           </h1>
 
-          <h2 className="hero-title fade-up-3 text-[clamp(2.2rem,9vw,5.5rem)] leading-[1.0] tracking-[-0.02em] mt-4 md:mt-5 md:whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-[#0C3E67] via-[#1a6bac] to-[#4a9edd] dark:from-[#4a9edd] dark:via-[#7ec8f0] dark:to-[#b8dff8]">
+          <h2 className="hero-title fade-up-3 text-[clamp(2.8rem,7vw,5.5rem)] leading-[1.0] tracking-[-0.02em] mt-5 md:whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-[#0C3E67] via-[#1a6bac] to-[#4a9edd] dark:from-[#4a9edd] dark:via-[#7ec8f0] dark:to-[#b8dff8]">
             With Ease.
           </h2>
 
-          <p className="fade-up-3 mt-6 md:mt-10 text-[14px] md:text-base text-[#0a1628]/45 dark:text-white/45 tracking-wide max-w-xs mx-auto leading-loose">
+          <p className="fade-up-3 mt-10 text-[15px] md:text-base text-[#0a1628]/45 dark:text-white/45 tracking-wide max-w-xs mx-auto leading-loose">
             Find your route. Know your stops. Never get lost again.
           </p>
 
-          {/* Buttons — stacked on mobile, row on desktop */}
-          <div className="fade-up-4 mt-8 md:mt-12 flex flex-col items-center gap-3 w-full max-w-xs md:max-w-none">
-            <div className="flex items-center justify-center gap-3 w-full md:w-auto">
-              <Link href="/route-map" className="btn-primary flex-1 md:flex-none inline-flex items-center justify-center gap-2.5 px-6 md:px-9 py-4 rounded-2xl bg-[#0C3E67] dark:bg-white text-white dark:text-[#0C3E67] text-[13px] font-semibold tracking-wide shadow-[0_8px_28px_rgba(12,62,103,0.32)]">
+          <div className="fade-up-4 mt-12 flex flex-col items-center gap-3 w-full px-2">
+            <div className="flex items-center gap-3 w-full">
+              <Link href="/route-map" className="btn-primary flex-1 inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#0C3E67] dark:bg-white text-white dark:text-[#0C3E67] text-[13px] font-semibold tracking-wide shadow-[0_8px_28px_rgba(12,62,103,0.32)]">
                 <MapPin className="w-4 h-4" />
                 Route Map
               </Link>
-              <Link href="/chatbot" className="btn-secondary flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-6 md:px-9 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
+              <Link href="/chatbot" className="btn-secondary flex-1 inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
                 AI Chatbot
                 <ChevronRight className="chevron w-4 h-4 opacity-60" />
               </Link>
             </div>
-            <Link href="/route-map?tab=navigate" className="btn-secondary w-full md:w-auto inline-flex items-center justify-center gap-2 px-6 md:px-9 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
+            <Link href="/route-map?tab=navigate" className="btn-secondary w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl bg-white/60 dark:bg-white/[0.07] border border-[#0C3E67]/18 dark:border-white/12 backdrop-blur-md text-[#0C3E67] dark:text-white/80 text-[13px] font-semibold tracking-wide shadow-sm">
               <Navigation className="w-4 h-4 opacity-70" />
               Navigate
               <ChevronRight className="chevron w-4 h-4 opacity-60" />
