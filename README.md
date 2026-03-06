@@ -91,7 +91,7 @@ src/
 
 ## Acknowledgments
 
-- DC Bus route data sourced from [MetroDreamin](https://metrodreamin.com/user/jg0ExjCKlehQTGMyeU7gTtGxsph2)
+- DC Bus route data by Jay Em, sourced from [MetroDreamin](https://metrodreamin.com/user/jg0ExjCKlehQTGMyeU7gTtGxsph2)
 
 ## License
 
