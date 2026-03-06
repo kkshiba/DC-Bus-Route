@@ -219,11 +219,15 @@ export default function Chatbot() {
       {/* Bottom Section */}
       <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
 
-        {/* Suggestions — single scrollable row, no wrapping */}
+        {/* Suggestions — single scrollable row with fade edges */}
         {showSuggestions && (
-          <div className="px-4 pt-2.5 pb-1">
-            <div className="max-w-3xl mx-auto">
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1.5">
+          <div className="pt-2.5 pb-1">
+            <div className="max-w-3xl mx-auto relative">
+              {/* Fade on right edge */}
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-gray-800 to-transparent z-10" />
+              {/* Fade on left edge */}
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-gray-800 to-transparent z-10" />
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1.5 px-4">
                 {suggestedQuestions.map((question, index) => (
                   <button
                     key={index}
