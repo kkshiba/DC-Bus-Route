@@ -66,10 +66,8 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         <link rel="icon" href="/favicon.png" type="image/png" />
-        {/* Preconnect for faster font loading */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Load all custom fonts globally: Syne (header/footer logo), Barlow (hero titles), DM Sans (hero body) */}
         <link
           href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Barlow:wght@700;800;900&family=DM+Sans:wght@400;500&display=swap"
           rel="stylesheet"
@@ -83,7 +81,7 @@ export default function RootLayout({
           >
             Skip to main content
           </a>
-          <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+          <div className="min-h-dvh flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
             <Header />
             <BusStatusBanner />
             <main id="main-content" className="flex-1">
