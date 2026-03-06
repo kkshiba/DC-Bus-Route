@@ -197,3 +197,11 @@
 /* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Thin styled scrollbar — invisible by default, subtle on hover */
+.suggestions-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.suggestions-scroll:hover { scrollbar-color: rgba(156,163,175,0.4) transparent; }
+.suggestions-scroll::-webkit-scrollbar { height: 3px; }
+.suggestions-scroll::-webkit-scrollbar-track { background: transparent; }
+.suggestions-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
+.suggestions-scroll:hover::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.4); }

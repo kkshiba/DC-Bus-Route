@@ -227,7 +227,7 @@ export default function Chatbot() {
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-gray-800 to-transparent z-10" />
               {/* Fade on left edge */}
               <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-gray-800 to-transparent z-10" />
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1.5 px-4">
+              <div className="flex gap-2 overflow-x-auto suggestions-scroll pb-1.5 px-4">
                 {suggestedQuestions.map((question, index) => (
                   <button
                     key={index}
