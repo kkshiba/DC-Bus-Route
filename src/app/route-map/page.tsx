@@ -111,9 +111,7 @@ function RouteMapContent() {
   // Stagger entrance animations after data loads
   useEffect(() => {
     if (!isLoading) {
-      // Sidebar first
       const t1 = setTimeout(() => setSidebarReady(true), 60);
-      // Map slightly after
       const t2 = setTimeout(() => setMapReady(true), 180);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
@@ -122,7 +120,6 @@ function RouteMapContent() {
   // Auto-open mobile sheets based on tab parameter
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined' && window.innerWidth < 768) {
-      // Small delay to let the page render first
       const t = setTimeout(() => {
         if (tabParam === "navigate") {
           setMobileNavigateOpen(true);
@@ -201,7 +198,6 @@ function RouteMapContent() {
   }, [locationFound]);
 
   const handleLocateMe = () => {
-    // If location already found, fly to it
     if (userLocation) {
       setFlyToLocation({ ...userLocation });
       return;
@@ -231,7 +227,6 @@ function RouteMapContent() {
       console.error("Geolocation error:", error.code, error.message);
       setIsLocating(false);
 
-      // Provide specific error messages based on error code
       switch (error.code) {
         case error.PERMISSION_DENIED:
           setLocateError("Location permission denied. Please allow location access in your browser settings.");
@@ -247,11 +242,9 @@ function RouteMapContent() {
       }
     };
 
-    // Try with high accuracy first, longer timeout for mobile
     navigator.geolocation.getCurrentPosition(
       onSuccess,
       (error) => {
-        // If high accuracy fails, try with low accuracy as fallback
         if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
           navigator.geolocation.getCurrentPosition(
             onSuccess,
@@ -389,10 +382,10 @@ function RouteMapContent() {
             className="w-full h-full"
           />
 
-          {/* Mobile FAB Buttons - Horizontal on left */}
+          {/* Mobile FAB Buttons */}
           <div className="md:hidden absolute bottom-6 left-4 flex flex-row items-center gap-2 z-[1000]">
             <button
-              onClick={() => setMobileRoutesOpen(true)}
+              onClick={() => { setMobileRoutesOpen(true); setSheetExpanded(false); }}
               className="flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-xl bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-gray-700 active:scale-95 border border-gray-200 dark:border-gray-700 font-semibold text-xs transition-all duration-200"
             >
               <Bus className="w-4 h-4" />
@@ -404,7 +397,7 @@ function RouteMapContent() {
               )}
             </button>
             <button
-              onClick={() => setMobileNavigateOpen(true)}
+              onClick={() => { setMobileNavigateOpen(true); setSheetExpanded(false); }}
               className="flex items-center gap-1.5 px-3 py-2.5 rounded-full shadow-xl bg-primary-600 dark:bg-primary-500 text-white hover:bg-primary-700 dark:hover:bg-primary-600 active:scale-95 font-semibold text-xs transition-all duration-200"
             >
               <Navigation className="w-4 h-4" />
@@ -453,7 +446,7 @@ function RouteMapContent() {
           </div>
         </div>
 
-        {/* Route Details Panel — slides in from right */}
+        {/* Route Details Panel — desktop only */}
         {hasRouteToDisplay && (
           <div className={`hidden md:block w-80 h-full overflow-y-auto bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 ${detailsReady ? "details-enter" : "opacity-0"}`}>
             <div className="p-4 space-y-4">
@@ -695,25 +688,32 @@ function RouteMapContent() {
           </div>
         )}
 
-        {/* Mobile Routes Bottom Sheet */}
+        {/* ─── Mobile Routes Bottom Sheet ─────────────────────────────────────
+            KEY FIX: Use `top-16` (= header height) instead of `inset-0` so the
+            backdrop and sheet never overlap the sticky site header.
+        ──────────────────────────────────────────────────────────────────────── */}
         {mobileRoutesOpen && (
-          <div className={`md:hidden fixed inset-0 z-[2000] ${sheetExpanded ? '' : 'pointer-events-none'}`}>
+          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000] pointer-events-none">
+            {/* Backdrop — only shown when expanded so map is interactive when minimized */}
+            {sheetExpanded && (
+              <div
+                className="sheet-backdrop-enter absolute inset-0 bg-black/40 pointer-events-auto"
+                onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
+              />
+            )}
+            {/* Sheet — always intercepts its own touches */}
             <div
-              className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${sheetExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-              onClick={() => { setMobileRoutesOpen(false); setSheetExpanded(false); }}
-            />
-            <div
-              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-[85vh]' : 'h-[45vh]'}`}
+              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
             >
               {/* Drag Handle */}
               <div
-                className="flex justify-center pt-3 pb-2 cursor-pointer"
+                className="flex justify-center pt-3 pb-2 cursor-pointer flex-shrink-0"
                 onClick={() => setSheetExpanded(!sheetExpanded)}
               >
                 <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               </div>
-              {/* Header */}
-              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              {/* Sheet Header */}
+              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                     <Bus className="w-5 h-5 text-primary-600 dark:text-primary-400" />
@@ -745,7 +745,7 @@ function RouteMapContent() {
                 </div>
               </div>
               {/* Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 <RoutesSidePanel
                   selectedRouteIds={selectedRouteIds}
                   onSelectionChange={setSelectedRouteIds}
@@ -756,34 +756,38 @@ function RouteMapContent() {
           </div>
         )}
 
-        {/* Mobile Navigate Bottom Sheet */}
+        {/* ─── Mobile Navigate Bottom Sheet ───────────────────────────────────
+            Same fix: `top-16` keeps it below the sticky header.
+        ──────────────────────────────────────────────────────────────────────── */}
         {mobileNavigateOpen && (
-          <div className={`md:hidden fixed inset-0 z-[2000] ${sheetExpanded ? '' : 'pointer-events-none'}`}>
+          <div className="md:hidden fixed top-16 bottom-0 left-0 right-0 z-[2000] pointer-events-none">
+            {/* Backdrop — only shown when expanded so map is interactive when minimized */}
+            {sheetExpanded && (
+              <div
+                className="sheet-backdrop-enter absolute inset-0 bg-black/40 pointer-events-auto"
+                onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
+              />
+            )}
+            {/* Sheet — always intercepts its own touches */}
             <div
-              className={`absolute inset-0 bg-black/40 transition-opacity duration-200 ${sheetExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-              onClick={() => { setMobileNavigateOpen(false); setSheetExpanded(false); }}
-            />
-            <div
-              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-[85vh]' : 'h-[45vh]'}`}
+              className={`sheet-enter pointer-events-auto absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl flex flex-col transition-[height] duration-300 ease-out ${sheetExpanded ? 'h-full' : 'h-[50vh]'}`}
             >
               {/* Drag Handle */}
               <div
-                className="flex justify-center pt-3 pb-2 cursor-pointer"
+                className="flex justify-center pt-3 pb-2 cursor-pointer flex-shrink-0"
                 onClick={() => setSheetExpanded(!sheetExpanded)}
               >
                 <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
               </div>
-              {/* Header */}
-              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              {/* Sheet Header */}
+              <div className="px-4 pb-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                     <Navigation className="w-5 h-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
                     <h2 className="font-semibold text-gray-900 dark:text-gray-100">Navigate</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Plan your trip
-                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Plan your trip</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -806,7 +810,7 @@ function RouteMapContent() {
                 </div>
               </div>
               {/* Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {planningStatus === "selecting" ? (
                   <RouteOptions />
                 ) : planningStatus === "navigating" && session ? (

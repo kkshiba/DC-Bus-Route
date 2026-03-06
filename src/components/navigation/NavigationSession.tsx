@@ -31,7 +31,6 @@ export function NavigationSession() {
     }
   };
 
-  // Render the appropriate status view
   const renderStatusView = () => {
     switch (session.status) {
       case "walking_to_stop":
@@ -51,7 +50,6 @@ export function NavigationSession() {
     }
   };
 
-  // Don't show header for completed status
   if (session.status === "completed" || session.status === "cancelled") {
     return (
       <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
@@ -62,8 +60,8 @@ export function NavigationSession() {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      {/* Header — fixed at top, never clipped */}
+      <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {currentRide && (
@@ -89,7 +87,6 @@ export function NavigationSession() {
             </div>
           </div>
 
-          {/* Cancel Button */}
           <button
             onClick={handleCancel}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -100,8 +97,8 @@ export function NavigationSession() {
         </div>
       </div>
 
-      {/* Status Content */}
-      <div className="flex-1 overflow-hidden">
+      {/* Status Content — scrollable so nothing gets clipped */}
+      <div className="flex-1 overflow-y-auto min-h-0">
         {renderStatusView()}
       </div>
     </div>

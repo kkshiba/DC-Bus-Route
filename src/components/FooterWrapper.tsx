@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Footer } from "@/components/Footer";
 
 // Pages where footer should be hidden
-const HIDE_FOOTER_PATHS = ["/route-map", "/navigate"];
+const HIDE_FOOTER_PATHS = ["/route-map", "/navigate", "/chatbot"];
 
 export function FooterWrapper() {
   const pathname = usePathname();
