@@ -88,7 +88,6 @@ src/
 
 - Antonio De Jesus
 - Kieffer Devera
-- fix
 
 ## Acknowledgments
 
